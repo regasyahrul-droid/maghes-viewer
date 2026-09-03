@@ -79,11 +79,18 @@ if "logged_in" not in st.session_state:
 # ==========================================
 # SUPABASE ENGINE
 # ==========================================
+DEFAULT_DB_URL = "postgresql://postgres.jhwdbhhkmonxvuzoiheo:gisjateng2026@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres"
+
 @st.cache_resource
 def get_public_engine():
-    db_url = st.secrets.get("DATABASE_URL", "")
+    try:
+        db_url = st.secrets.get("DATABASE_URL", DEFAULT_DB_URL)
+    except Exception:
+        db_url = DEFAULT_DB_URL
+        
     if not db_url or "PASSWORD" in db_url:
-        return None
+        db_url = DEFAULT_DB_URL
+        
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql://", 1)
     return create_engine(db_url)
