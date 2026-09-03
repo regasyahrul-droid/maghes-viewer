@@ -138,6 +138,12 @@ def inject_css():
     border-right: 1px solid var(--border-glow);
 }}
 footer {{ visibility: hidden; }}
+[data-testid="manage-app-button"],
+.stAppDeployButton,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"] {{
+    display: none !important;
+}}
 [data-testid="stSidebarContent"] {{ display: flex; flex-direction: column; }}
 [data-testid="stSidebarUserContent"] {{ order: 1; padding-top: 2rem; }}
 [data-testid="stSidebarNav"] {{ order: 2; }}
@@ -201,11 +207,18 @@ footer {{ visibility: hidden; }}
 """, unsafe_allow_html=True)
 
 
-def render_footer():
+def render_footer(page="home"):
     footer_logo = f'<img class="footer-logo" src="data:image/png;base64,{LOGO_PLN_B64}">' if LOGO_PLN_B64 else ''
+    is_logged_in = st.session_state.get("logged_in", False)
+    
+    if not is_logged_in or page == "login":
+        text_content = '<span>PLN UID Jawa Tengah</span> &middot; <span>MAGHES Enterprise Platform</span> &middot; &copy; 2026'
+    else:
+        text_content = '<span>Modul MAGHES Validator</span> &mdash; Developed by <span>Rega Syahrul</span> | Contributors: <span>Dhimas Pangestu & Wildan Akbar</span> &middot; &copy; 2026'
+        
     st.markdown(f"""
 <div class="app-footer">
-    {footer_logo} <span>MAGHES Viewer (Public Internet)</span> — Developed by <span>Rega Syahrul</span> | Contributors: <span>Dhimas Pangestu & Wildan Akbar</span> &middot; &copy; 2026
+    {footer_logo} {text_content}
 </div>
 """, unsafe_allow_html=True)
 
@@ -239,6 +252,12 @@ if not st.session_state["logged_in"]:
         .block-container {{ max-width: 100% !important; padding: 0 !important; margin: 0 !important; }}
         [data-testid="stHeader"] {{ background: transparent !important; display: none !important; }}
         footer {{visibility: hidden;}}
+        [data-testid="manage-app-button"],
+        .stAppDeployButton,
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"] {{
+            display: none !important;
+        }}
         [data-testid="stSidebar"] {{ display: none !important; }}
 
         .magis-hud-container {{
@@ -321,7 +340,6 @@ if not st.session_state["logged_in"]:
     col_l, col_c, col_r = st.columns([1.5, 1, 1.5])
     with col_c:
         with st.form("login_form"):
-            st.markdown("<p style='text-align:center; color:#A3C4DC; font-size:0.75rem; margin-bottom:0.5rem;'>Mode: <b style=\"color:#7CC242;\">Public Viewer (Internet)</b></p>", unsafe_allow_html=True)
             input_user = st.text_input("Username Database").strip()
             input_pass = st.text_input("Password", type="password")
             submit = st.form_submit_button("⚡ Hubungkan ke Server ⚡", use_container_width=True)
@@ -340,7 +358,7 @@ if not st.session_state["logged_in"]:
                 else:
                     st.error("Username atau Password ditolak!")
 
-    render_footer()
+    render_footer("login")
 
 # ══════════════════════════════════════
 # DASHBOARD UTAMA (Sudah Login)
@@ -579,4 +597,4 @@ else:
                 use_container_width=True
             )
 
-    render_footer()
+    render_footer("validator")
