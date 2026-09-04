@@ -485,26 +485,28 @@ else:
                 import json
                 rekap_data = json.loads(record['hasil_rekapitulasi'])
                 
-                col1, col2 = st.columns(2)
-                
-                if "Classification" in rekap_data:
-                    with col1:
-                        st.markdown("#### Berdasarkan Classification")
-                        df_class = pd.DataFrame(rekap_data["Classification"])
-                        if not df_class.empty:
-                            st.bar_chart(df_class.set_index("Classification")["Total Panjang (KMS)"])
-                            total_row = pd.DataFrame([{"Classification": "TOTAL", "Total Panjang (KMS)": round(df_class["Total Panjang (KMS)"].sum(), 2), "Jumlah Record": int(df_class["Jumlah Record"].sum())}])
-                            st.dataframe(pd.concat([df_class, total_row], ignore_index=True), use_container_width=True, hide_index=True)
-                
-                if "Fasa Jaringan" in rekap_data:
-                    with col2:
-                        st.markdown("#### Berdasarkan Fasa Jaringan")
-                        df_fasa = pd.DataFrame(rekap_data["Fasa Jaringan"])
-                        if not df_fasa.empty:
-                            st.bar_chart(df_fasa.set_index("Fasa Jaringan")["Total Panjang (KMS)"])
-                            total_row = pd.DataFrame([{"Fasa Jaringan": "TOTAL", "Total Panjang (KMS)": round(df_fasa["Total Panjang (KMS)"].sum(), 2), "Jumlah Record": int(df_fasa["Jumlah Record"].sum())}])
-                            st.dataframe(pd.concat([df_fasa, total_row], ignore_index=True), use_container_width=True, hide_index=True)
-                            
+                keys = list(rekap_data.keys())
+                if len(keys) == 1:
+                    k = keys[0]
+                    st.markdown(f"#### 📊 Berdasarkan {k}")
+                    df_k = pd.DataFrame(rekap_data[k])
+                    if not df_k.empty:
+                        first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
+                        if first_num_col:
+                            st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
+                        st.dataframe(df_k, use_container_width=True, hide_index=True)
+                elif len(keys) >= 2:
+                    col1, col2 = st.columns(2)
+                    for idx, k in enumerate(keys[:2]):
+                        target_col = col1 if idx == 0 else col2
+                        with target_col:
+                            st.markdown(f"#### 📊 Berdasarkan {k}")
+                            df_k = pd.DataFrame(rekap_data[k])
+                            if not df_k.empty:
+                                first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
+                                if first_num_col:
+                                    st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
+                                st.dataframe(df_k, use_container_width=True, hide_index=True)
             except Exception as e:
                 st.error(f"Gagal memuat rekapitulasi: {e}")
     
