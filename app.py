@@ -35,21 +35,10 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 # ==========================================
 USERS_DB = {
     "rega.syahrul": {"pass": "aheadfinelattedoubleshoot", "role": "admin", "schema": "master_jateng"},
-    "dhimas.pangestu": {"pass": "aheadhezelnutpraline", "role": "pic", "schema": "klaten_5219,surakarta_5212,tegal_5216,pekalongan_5220"},
-    "wildan.akbar": {"pass": "aheadeldercoffee", "role": "pic", "schema": "magelang_5214,salatiga_5218,kudus_5211,grobogan_5222"},
-    "user_kudus": {"pass": "kudus_dist2026", "role": "viewer", "schema": "kudus_5211"},
-    "user_surakarta": {"pass": "surakarta_dist2026", "role": "viewer", "schema": "surakarta_5212"},
-    "user_magelang": {"pass": "magelang_dist2026", "role": "viewer", "schema": "magelang_5214"},
-    "user_purwokerto": {"pass": "pwt_dist2026", "role": "viewer", "schema": "purwokerto_5215"},
-    "user_tegal": {"pass": "tgl_dist2026", "role": "viewer", "schema": "tegal_5216"},
     "user_semarang": {"pass": "smg_dist2026", "role": "viewer", "schema": "semarang_5217"},
-    "user_salatiga": {"pass": "sltg_dist2026", "role": "viewer", "schema": "salatiga_5218"},
-    "user_klaten": {"pass": "klt_dist2026", "role": "viewer", "schema": "klaten_5219"},
-    "user_pekalongan": {"pass": "pkl_dist2026", "role": "viewer", "schema": "pekalongan_5220"},
+    "user_purwokerto": {"pass": "pwt_dist2026", "role": "viewer", "schema": "purwokerto_5215"},
     "user_cilacap": {"pass": "clp_dist2026", "role": "viewer", "schema": "cilacap_5221"},
-    "user_grobogan": {"pass": "gbg_dist2026", "role": "viewer", "schema": "grobogan_5222"},
     "user_sukoharjo": {"pass": "skh_dist2026", "role": "viewer", "schema": "sukoharjo_5223"},
-    "user_up2d": {"pass": "up2d_dist2026", "role": "viewer", "schema": "up2d_5226"},
 }
 
 # ==========================================
