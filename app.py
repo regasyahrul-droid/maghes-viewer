@@ -34,9 +34,9 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 # USER DATABASE (sama persis dengan MAGHES internal)
 # ==========================================
 USERS_DB = {
-    "rega.syahrul": {"pass": "aheadfinelatte", "role": "admin", "schema": "master_jateng"},
-    "dhimas.pangestu": {"pass": "aheadhezelnutpraline", "role": "admin", "schema": "master_jateng"},
-    "wildan.akbar": {"pass": "aheadeldercoffee", "role": "admin", "schema": "master_jateng"},
+    "rega.syahrul": {"pass": "aheadfinelattedoubleshoot", "role": "admin", "schema": "master_jateng"},
+    "dhimas.pangestu": {"pass": "aheadhezelnutpraline", "role": "pic", "schema": "klaten_5219,surakarta_5212,tegal_5216,pekalongan_5220"},
+    "wildan.akbar": {"pass": "aheadeldercoffee", "role": "pic", "schema": "magelang_5214,salatiga_5218,kudus_5211,grobogan_5222"},
     "user_kudus": {"pass": "kudus_dist2026", "role": "viewer", "schema": "kudus_5211"},
     "user_surakarta": {"pass": "surakarta_dist2026", "role": "viewer", "schema": "surakarta_5212"},
     "user_magelang": {"pass": "magelang_dist2026", "role": "viewer", "schema": "magelang_5214"},
@@ -394,7 +394,11 @@ else:
         if current_role == "admin":
             st.info("Mode Admin: Anda dapat melihat seluruh data UP3.")
         else:
-            st.info(f"🔒 Terkunci di Schema: **{user_schema}**")
+            schemas_list = [s.strip() for s in user_schema.split(',')]
+            if len(schemas_list) > 1:
+                st.info(f"🔒 Terkunci di {len(schemas_list)} UP3:\n\n" + "\n".join([f"- **{s}**" for s in schemas_list]))
+            else:
+                st.info(f"🔒 Terkunci di Schema: **{user_schema}**")
 
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
@@ -403,7 +407,14 @@ else:
             if current_role == "admin":
                 df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
             else:
-                df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name LIKE :schema ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": f"%{user_schema}%"})
+                schemas_list = [s.strip() for s in user_schema.split(',')]
+                if len(schemas_list) > 1:
+                    conditions = " OR ".join([f"schema_name LIKE :schema_{i}" for i in range(len(schemas_list))])
+                    params = {f"schema_{i}": f"%{s}%" for i, s in enumerate(schemas_list)}
+                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE {conditions} ORDER BY schema_name, tabel_sumber, published_at DESC")
+                    df_verif = pd.read_sql(q, engine, params=params)
+                else:
+                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name LIKE :schema ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": f"%{user_schema}%"})
             # Sort again by published_at DESC for display
             df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
         except Exception:
