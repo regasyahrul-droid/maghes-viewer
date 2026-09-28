@@ -91,8 +91,12 @@ def get_public_engine():
     if not db_url or "PASSWORD" in db_url:
         db_url = DEFAULT_DB_URL
         
+    # BARIS YANG DIUBAH (tambah +psycopg2)
     if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
+        db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        
     return create_engine(db_url)
 
 
