@@ -54,7 +54,7 @@ st.set_page_config(
     page_title="MAGHES Viewer — PLN UID Jateng",
     page_icon=favicon,
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ==========================================
@@ -124,7 +124,7 @@ def inject_css():
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
     background-size: 35px; background-repeat: no-repeat; background-position: 15px center; letter-spacing: 0.5px;
 }}
-[data-testid="stHeader"] button {{ color: var(--text-secondary) !important; }}
+[data-testid="stHeader"] button {{ color: var(--text-secondary) !important; z-index: 9999 !important; position: relative !important; }}
 [data-testid="stSidebar"] {{
     background: linear-gradient(180deg, rgba(4, 28, 44, 0.90) 0%, rgba(10, 42, 60, 0.90) 100%) !important;
     backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
