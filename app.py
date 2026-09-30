@@ -123,16 +123,31 @@ def inject_css():
     font-size: 1.35rem; font-weight: 800; white-space: nowrap; padding-left: 65px; height: 100%; width: 100%;
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
     background-size: 35px; background-repeat: no-repeat; background-position: 15px center; letter-spacing: 0.5px;
+    pointer-events: none;
 }}
-[data-testid="stHeader"] button {{ color: var(--text-secondary) !important; z-index: 9999 !important; position: relative !important; }}
+[data-testid="collapsedControl"], [data-testid="stHeader"] button {{
+    z-index: 999999 !important; 
+    position: fixed !important; 
+    top: 10px !important; 
+    left: 10px !important;
+    background: #0057A8 !important; 
+    border-radius: 8px !important; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 5px !important;
+}}
+[data-testid="collapsedControl"] svg, [data-testid="stHeader"] button svg {{
+    fill: white !important;
+    color: white !important;
+}}
 [data-testid="stSidebar"] {{
     background: linear-gradient(180deg, rgba(4, 28, 44, 0.90) 0%, rgba(10, 42, 60, 0.90) 100%) !important;
     backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
     border-right: 1px solid var(--border-glow);
 }}
 footer {{ visibility: hidden; }}
-[data-testid="manage-app-button"],
-.stAppDeployButton,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"] {{
     display: none !important;
@@ -245,8 +260,6 @@ if not st.session_state["logged_in"]:
         .block-container {{ max-width: 100% !important; padding: 0 !important; margin: 0 !important; }}
         [data-testid="stHeader"] {{ background: transparent !important; display: none !important; }}
         footer {{visibility: hidden;}}
-        [data-testid="manage-app-button"],
-        .stAppDeployButton,
         [data-testid="stToolbar"],
         [data-testid="stDecoration"] {{
             display: none !important;
