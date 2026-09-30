@@ -100,6 +100,7 @@ def inject_css():
 :root {{
     --pln-blue: #0057A8; --pln-blue-light: #0073D1; --pln-blue-glow: rgba(0, 87, 168, 0.3);
     --pln-green: #7CC242; --pln-green-light: #96D35F; --pln-green-glow: rgba(124, 194, 66, 0.3);
+    --pln-power: #00573F; --pln-power-light: #007A59;
     --bg-base: #041C2C; --bg-surface: #0A2A3C; --bg-card: #0E3349;
     --border-subtle: rgba(0, 87, 168, 0.15); --border-glow: rgba(0, 87, 168, 0.35);
     --text-primary: #EDF5FC; --text-secondary: #A3C4DC; --text-muted: #6B93AD;
@@ -119,16 +120,23 @@ def inject_css():
 }}
 [data-testid="stHeader"]::before {{
     content: "PENGELOLAAN ASET DISTRIBUSI JAWA TENGAH";
-    position: absolute;
-    left: 45px;
-    display: flex; align-items: center; color: var(--text-primary);
-    font-size: 1.35rem; font-weight: 800; white-space: nowrap; padding-left: 55px; height: 100%;
+    display: flex;
+    align-items: center;
+    color: var(--text-primary);
+    font-size: 1.35rem;
+    font-weight: 800;
+    white-space: nowrap;
+    padding-left: 65px;
+    height: 100%;
+    width: 100%;
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
-    background-size: 35px; background-repeat: no-repeat; background-position: left center; letter-spacing: 0.5px;
-    pointer-events: none;
+    background-size: 35px;
+    background-repeat: no-repeat;
+    background-position: 15px center;
+    letter-spacing: 0.5px;
 }}
-[data-testid="collapsedControl"], [data-testid="stHeader"] button {{
-    z-index: 999999 !important; 
+[data-testid="stHeader"] button {{
+    color: var(--text-secondary) !important;
 }}
 
 [data-testid="stSidebar"] {{
@@ -177,7 +185,7 @@ footer {{ visibility: hidden; }}
 }}
 .stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; }}
 .stTabs [aria-selected="true"] {{
-    background: linear-gradient(135deg, var(--pln-blue), #00573F) !important; color: white !important;
+    background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
 }}
 
 [data-testid="stAlert"] {{
