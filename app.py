@@ -207,7 +207,7 @@ def render_footer(page="home"):
     if not is_logged_in or page == "login":
         text_content = '<span>PLN UID Jawa Tengah</span> &middot; <span>MAGHES Enterprise Platform</span> &middot; &copy; 2026'
     else:
-        text_content = '<span>Modul MAGHES Validator</span> &mdash; Developed by <span>Rega Syahrul</span> | Contributors: <span>Dhimas Pangestu & Wildan Akbar</span> &middot; &copy; 2026'
+        text_content = '<span>Modul MAGHES Validator</span> &mdash; Developed by <span>Rega Syahrul</span> | &middot; &copy; 2026'
         
     st.markdown(f"""
 <div class="app-footer">
