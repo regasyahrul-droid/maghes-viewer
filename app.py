@@ -119,29 +119,18 @@ def inject_css():
 }}
 [data-testid="stHeader"]::before {{
     content: "PENGELOLAAN ASET DISTRIBUSI JAWA TENGAH";
+    position: absolute;
+    left: 45px;
     display: flex; align-items: center; color: var(--text-primary);
-    font-size: 1.35rem; font-weight: 800; white-space: nowrap; padding-left: 65px; height: 100%; width: 100%;
+    font-size: 1.35rem; font-weight: 800; white-space: nowrap; padding-left: 55px; height: 100%;
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
-    background-size: 35px; background-repeat: no-repeat; background-position: 15px center; letter-spacing: 0.5px;
+    background-size: 35px; background-repeat: no-repeat; background-position: left center; letter-spacing: 0.5px;
     pointer-events: none;
 }}
 [data-testid="collapsedControl"], [data-testid="stHeader"] button {{
     z-index: 999999 !important; 
-    position: fixed !important; 
-    top: 10px !important; 
-    left: 10px !important;
-    background: #0057A8 !important; 
-    border-radius: 8px !important; 
-    box-shadow: 0 0 10px rgba(0,0,0,0.5) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 5px !important;
 }}
-[data-testid="collapsedControl"] svg, [data-testid="stHeader"] button svg {{
-    fill: white !important;
-    color: white !important;
-}}
+
 [data-testid="stSidebar"] {{
     background: linear-gradient(180deg, rgba(4, 28, 44, 0.90) 0%, rgba(10, 42, 60, 0.90) 100%) !important;
     backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
