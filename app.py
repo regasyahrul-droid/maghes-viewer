@@ -121,15 +121,16 @@ def inject_css():
 [data-testid="stHeader"]::before {{
     content: "PENGELOLAAN ASET DISTRIBUSI JAWA TENGAH";
     position: absolute;
-    left: 45px;
+    left: 60px;
     top: 0;
+    right: 0;
     display: flex;
     align-items: center;
     color: var(--text-primary);
     font-size: 1.35rem;
     font-weight: 800;
     white-space: nowrap;
-    padding-left: 55px;
+    padding-left: 50px;
     height: 100%;
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
     background-size: 35px;
@@ -139,12 +140,15 @@ def inject_css():
     pointer-events: none;
 }}
 [data-testid="stHeader"] button, [data-testid="collapsedControl"] {{
-    color: var(--text-secondary) !important;
+    color: #EDF5FC !important;
     z-index: 999999 !important;
+    background-color: rgba(4, 28, 44, 0.8) !important;
+    border-radius: 5px !important;
 }}
-[data-testid="collapsedControl"] svg, [data-testid="stHeader"] button svg {{
+[data-testid="stHeader"] button svg, [data-testid="collapsedControl"] svg {{
     fill: #EDF5FC !important;
     color: #EDF5FC !important;
+    stroke: #EDF5FC !important;
 }}
 
 [data-testid="stSidebar"] {{
@@ -191,7 +195,7 @@ footer {{ visibility: hidden; }}
 .stTabs [data-baseweb="tab-list"] {{
     gap: 4px; background: var(--bg-surface); border-radius: 14px; padding: 5px; border: 1px solid var(--border-subtle);
 }}
-.stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; color: #A3C4DC !important; }}
+.stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; }}
 .stTabs [aria-selected="true"] {{
     background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
 }}
@@ -200,13 +204,13 @@ div[data-testid="stTabs"] > div:first-child {{
     background: var(--bg-surface) !important; border-radius: 14px !important; padding: 5px !important; border: 1px solid var(--border-subtle) !important; gap: 4px !important;
 }}
 button[data-baseweb="tab"] {{
-    border-radius: 10px !important; font-weight: 600 !important; font-size: 0.82rem !important; margin-right: 4px !important; color: #A3C4DC !important;
+    border-radius: 10px !important; font-weight: 600 !important; font-size: 0.82rem !important; margin-right: 4px !important; color: #EDF5FC !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
     background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
 }}
 div[data-testid="stTabs"] button p {{
-    color: inherit !important;
+    color: #EDF5FC !important;
 }}
 
 [data-testid="stAlert"] {{
@@ -501,7 +505,7 @@ else:
     st.success("✅ Verifikasi berhasil dijalankan! Hasil telah disimpan ke database log.")
     st.markdown(f"**Target:** `{record['schema_name']}.{record['tabel_sumber']}` | **Tipe:** **{record['layer_type'].upper()}**")
     
-    st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{record['total_record']}** | Terakhir Publish: **{record['published_at']}**")
+    st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{record['total_record']}}** | Terakhir Publish: **{record['published_at']}**")
 
     # ── Tabs ──
     tab_rekap, tab_struktur, tab_atribut, tab_spasial, tab_error = st.tabs([
