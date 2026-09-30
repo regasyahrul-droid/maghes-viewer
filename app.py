@@ -7,6 +7,7 @@ Admin UP3 bisa login dengan akun mereka tanpa VPN.
 
 import streamlit as st
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine, text
 import base64, os, math
 
@@ -131,7 +132,7 @@ def inject_css():
     white-space: nowrap;
     padding-left: 55px;
     height: 100%;
-    background-image: url("data:image/png;base64:{{LOGO_PLN_B64}}");
+    background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
     background-size: 35px;
     background-repeat: no-repeat;
     background-position: left center;
@@ -227,7 +228,7 @@ button[data-baseweb="tab"][aria-selected="true"] {{
 
 
 def render_footer(page="home"):
-    footer_logo = f'<img class="footer-logo" src="data:image/png;base64,{{LOGO_PLN_B64}}">' if LOGO_PLN_B64 else ''
+    footer_logo = f'<img class="footer-logo" src="data:image/png;base64,{LOGO_PLN_B64}">' if LOGO_PLN_B64 else ''
     is_logged_in = st.session_state.get("logged_in", False)
     
     if not is_logged_in or page == "login":
@@ -237,7 +238,7 @@ def render_footer(page="home"):
         
     st.markdown(f"""
 <div class="app-footer">
-    {{footer_logo}} {{text_content}}
+    {footer_logo} {text_content}
 </div>
 """, unsafe_allow_html=True)
 
@@ -245,12 +246,12 @@ def render_footer(page="home"):
 def render_card(title, score):
     if score is None: score = 0
     color = "var(--success)" if score >= 95 else "var(--warning)" if score >= 75 else "var(--danger)"
-    display_score = "99.9" if 99.9 < score < 100 else f"{{score:.1f}}"
+    display_score = "99.9" if 99.9 < score < 100 else f"{score:.1f}"
     return f"""
     <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 14px;
-        padding: 1.2rem; text-align: center; border-top: 3px solid {{color}};">
-        <p style="margin:0; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">{{title}}</p>
-        <h1 style="color:{{color}}; font-size:2.5rem; margin:10px 0; font-family:'JetBrains Mono',monospace; font-weight:800;">{{display_score}}%</h1>
+        padding: 1.2rem; text-align: center; border-top: 3px solid {color};">
+        <p style="margin:0; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">{title}</p>
+        <h1 style="color:{color}; font-size:2.5rem; margin:10px 0; font-family:'JetBrains Mono',monospace; font-weight:800;">{display_score}%</h1>
     </div>
     """
 
@@ -263,7 +264,7 @@ if not st.session_state["logged_in"]:
         st.markdown(f"""
         <style>
         .stApp {{
-            background-image: url("data:image/png;base64,{{BG_B64}}");
+            background-image: url("data:image/png;base64,{BG_B64}");
             background-size: cover; background-position: center top;
             background-repeat: no-repeat; background-attachment: fixed;
             height: 100vh !important; overflow: hidden !important;
@@ -341,10 +342,10 @@ if not st.session_state["logged_in"]:
         </style>
         """, unsafe_allow_html=True)
 
-    logo_html = f'<img class="magis-logo" src="data:image/png;base64,{{LOGO_B64}}">' if LOGO_B64 else ''
+    logo_html = f'<img class="magis-logo" src="data:image/png;base64,{LOGO_B64}">' if LOGO_B64 else ''
     st.markdown(f"""
     <div class="magis-hud-container">
-        {{logo_html}}
+        {logo_html}
         <div class="magis-text-box">
             <h1 class="magis-title">MAGHES</h1>
             <p class="magis-subtitle">Management Asset & Geospatial Holistic Electrical System</p>
@@ -390,12 +391,12 @@ else:
 
     # ── Sidebar ──
     with st.sidebar:
-        logo_sidebar = f'<img style="width: 80%; display: block; margin: 0 auto 20px auto;" src="data:image/png;base64,{{LOGO_B64}}">' if LOGO_B64 else ''
+        logo_sidebar = f'<img style="width: 80%; display: block; margin: 0 auto 20px auto;" src="data:image/png;base64,{LOGO_B64}">' if LOGO_B64 else ''
         st.markdown(f"""
         <div class="sidebar-user-card">
-            {{logo_sidebar}}
-            <div class="sidebar-username">{{db_user.upper()}}</div>
-            <div class="sidebar-role">{{'TIM EXPERTISE GIS' if current_role == 'admin' else current_role.upper()}}</div>
+            {logo_sidebar}
+            <div class="sidebar-username">{db_user.upper()}</div>
+            <div class="sidebar-role">{'TIM EXPERTISE GIS' if current_role == 'admin' else current_role.upper()}</div>
         </div>
         """, unsafe_allow_html=True)
         if st.button("🚪 Putuskan Koneksi", use_container_width=True):
@@ -409,9 +410,9 @@ else:
         else:
             schemas_list = [s.strip() for s in user_schema.split(',')]
             if len(schemas_list) > 1:
-                st.info(f"🔒 Terkunci di {{len(schemas_list)}} UP3:\n\n" + "\n".join([f"- **{{s}}**" for s in schemas_list]))
+                st.info(f"🔒 Terkunci di {len(schemas_list)} UP3:\n\n" + "\n".join([f"- **{s}**" for s in schemas_list]))
             else:
-                st.info(f"🔒 Terkunci di Schema: **{{user_schema}}**")
+                st.info(f"🔒 Terkunci di Schema: **{user_schema}**")
 
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
@@ -422,12 +423,12 @@ else:
             else:
                 schemas_list = [s.strip() for s in user_schema.split(',')]
                 if len(schemas_list) > 1:
-                    conditions = " OR ".join([f"schema_name LIKE :schema_{{i}}" for i in range(len(schemas_list))])
-                    params = {{f"schema_{{i}}": f"%{{s}}%" for i, s in enumerate(schemas_list)}}
-                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE {{conditions}} ORDER BY schema_name, tabel_sumber, published_at DESC")
+                    conditions = " OR ".join([f"schema_name LIKE :schema_{i}" for i in range(len(schemas_list))])
+                    params = {f"schema_{i}": f"%{s}%" for i, s in enumerate(schemas_list)}
+                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE {conditions} ORDER BY schema_name, tabel_sumber, published_at DESC")
                     df_verif = pd.read_sql(q, engine, params=params)
                 else:
-                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name LIKE :schema ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={{"schema": f"%{{user_schema}}%"}})
+                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name LIKE :schema ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": f"%{user_schema}%"})
             # Sort again by published_at DESC for display
             df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
         except Exception:
@@ -439,7 +440,7 @@ else:
         else:
             st.markdown("##### 📋 Pilih Hasil Verifikasi")
             options = df_verif['id'].tolist()
-            format_map = {{row['id']: f"{{row['schema_name']}}.{{row['tabel_sumber']}} ({{row['layer_type']}})" for _, row in df_verif.iterrows()}}
+            format_map = {row['id']: f"{row['schema_name']}.{row['tabel_sumber']} ({row['layer_type']})" for _, row in df_verif.iterrows()}
             selected_verif_id = st.selectbox(
                 "Tabel Target:",
                 options,
@@ -466,14 +467,14 @@ else:
         """, unsafe_allow_html=True)
 
     # ── Header Bar ──
-    header_logo = f'<img class="header-logo" src="data:image/png;base64,{{LOGO_B64}}">' if LOGO_B64 else ''
+    header_logo = f'<img class="header-logo" src="data:image/png;base64,{LOGO_B64}">' if LOGO_B64 else ''
     st.markdown(f"""
     <div class="header-bar">
         <div style="display: flex; align-items: center;">
-            {{header_logo}}
+            {header_logo}
             <div>
                 <h1>MAGHES: Dashboard Hasil Verifikasi</h1>
-                <p>Mode: Public Viewer (Internet) | User: <b style="color:#7CC242;">{{db_user.upper()}}</b> | Schema: {{user_schema}}</p>
+                <p>Mode: Public Viewer (Internet) | User: <b style="color:#7CC242;">{db_user.upper()}</b> | Schema: {user_schema}</p>
             </div>
         </div>
     </div>
@@ -492,9 +493,9 @@ else:
     record = df_verif[df_verif['id'] == selected_verif_id].iloc[0]
 
     st.success("✅ Verifikasi berhasil dijalankan! Hasil telah disimpan ke database log.")
-    st.markdown(f"**Target:** `{{record['schema_name']}}.{{record['tabel_sumber']}}` | **Tipe:** **{{record['layer_type'].upper()}}**")
+    st.markdown(f"**Target:** `{record['schema_name']}.{record['tabel_sumber']}` | **Tipe:** **{record['layer_type'].upper()}**")
     
-    st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{{record['total_record']}}** | Terakhir Publish: **{{record['published_at']}}**")
+    st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{record['total_record']}** | Terakhir Publish: **{record['published_at']}**")
 
     # ── Tabs ──
     tab_rekap, tab_struktur, tab_atribut, tab_spasial, tab_error = st.tabs([
@@ -522,24 +523,7 @@ else:
                         first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
                         if first_num_col:
                             st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
-                        
-                        # Add TOTAL row like Intranet
-                        total_dict = {df_k.columns[0]: "TOTAL"}
-                        for col in df_k.columns[1:]:
-                            if pd.api.types.is_numeric_dtype(df_k[col]):
-                                total_dict[col] = df_k[col].sum()
-                                if isinstance(df_k[col].iloc[0], (int, np.integer)) or df_k[col].apply(lambda x: x.is_integer() if isinstance(x, float) else True).all():
-                                    total_dict[col] = int(total_dict[col])
-                                else:
-                                    total_dict[col] = round(float(total_dict[col]), 2)
-                            else:
-                                total_dict[col] = ""
-                        
-                        df_view = pd.concat([df_k, pd.DataFrame([total_dict])], ignore_index=True)
-                        st.dataframe(df_view, use_container_width=True, hide_index=True)
-                        
-                        csv_data_rekap = df_view.to_csv(index=False).encode('utf-8')
-                        st.download_button(f"📥 Download {k} (CSV)", csv_data_rekap, f"rekap_{k}_{record['tabel_sumber']}.csv", "text/csv", key=f"dl_{k}")
+                        st.dataframe(df_k, use_container_width=True, hide_index=True)
                 elif len(keys) >= 2:
                     col1, col2 = st.columns(2)
                     for idx, k in enumerate(keys[:2]):
@@ -551,24 +535,7 @@ else:
                                 first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
                                 if first_num_col:
                                     st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
-                                
-                                # Add TOTAL row like Intranet
-                                total_dict = {df_k.columns[0]: "TOTAL"}
-                                for col in df_k.columns[1:]:
-                                    if pd.api.types.is_numeric_dtype(df_k[col]):
-                                        total_dict[col] = df_k[col].sum()
-                                        if isinstance(df_k[col].iloc[0], (int, np.integer)) or df_k[col].apply(lambda x: x.is_integer() if isinstance(x, float) else True).all():
-                                            total_dict[col] = int(total_dict[col])
-                                        else:
-                                            total_dict[col] = round(float(total_dict[col]), 2)
-                                    else:
-                                        total_dict[col] = ""
-                                
-                                df_view = pd.concat([df_k, pd.DataFrame([total_dict])], ignore_index=True)
-                                st.dataframe(df_view, use_container_width=True, hide_index=True)
-                                
-                                csv_data_rekap = df_view.to_csv(index=False).encode('utf-8')
-                                st.download_button(f"📥 Download {k} (CSV)", csv_data_rekap, f"rekap_{k}_{record['tabel_sumber']}.csv", "text/csv", key=f"dl_{k}_2col")
+                                st.dataframe(df_k, use_container_width=True, hide_index=True)
             except Exception as e:
                 st.error(f"Gagal memuat rekapitulasi: {e}")
     
