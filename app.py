@@ -120,23 +120,27 @@ def inject_css():
 }}
 [data-testid="stHeader"]::before {{
     content: "PENGELOLAAN ASET DISTRIBUSI JAWA TENGAH";
+    position: absolute;
+    left: 45px;
+    top: 0;
     display: flex;
     align-items: center;
     color: var(--text-primary);
     font-size: 1.35rem;
     font-weight: 800;
     white-space: nowrap;
-    padding-left: 65px;
+    padding-left: 55px;
     height: 100%;
-    width: 100%;
     background-image: url("data:image/png;base64,{LOGO_PLN_B64}");
     background-size: 35px;
     background-repeat: no-repeat;
-    background-position: 15px center;
+    background-position: left center;
     letter-spacing: 0.5px;
+    pointer-events: none;
 }}
-[data-testid="stHeader"] button {{
+[data-testid="stHeader"] button, [data-testid="collapsedControl"] {{
     color: var(--text-secondary) !important;
+    z-index: 999999 !important;
 }}
 
 [data-testid="stSidebar"] {{
@@ -185,6 +189,16 @@ footer {{ visibility: hidden; }}
 }}
 .stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; }}
 .stTabs [aria-selected="true"] {{
+    background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
+}}
+/* Dukungan untuk Streamlit Cloud (versi 1.35+) */
+div[data-testid="stTabs"] > div:first-child {{
+    background: var(--bg-surface) !important; border-radius: 14px !important; padding: 5px !important; border: 1px solid var(--border-subtle) !important; gap: 4px !important;
+}}
+button[data-baseweb="tab"] {{
+    border-radius: 10px !important; font-weight: 600 !important; font-size: 0.82rem !important; margin-right: 4px !important;
+}}
+button[data-baseweb="tab"][aria-selected="true"] {{
     background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
 }}
 
