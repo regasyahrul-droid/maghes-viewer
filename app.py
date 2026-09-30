@@ -142,6 +142,10 @@ def inject_css():
     color: var(--text-secondary) !important;
     z-index: 999999 !important;
 }}
+[data-testid="collapsedControl"] svg, [data-testid="stHeader"] button svg {{
+    fill: #EDF5FC !important;
+    color: #EDF5FC !important;
+}}
 
 [data-testid="stSidebar"] {{
     background: linear-gradient(180deg, rgba(4, 28, 44, 0.90) 0%, rgba(10, 42, 60, 0.90) 100%) !important;
@@ -187,7 +191,7 @@ footer {{ visibility: hidden; }}
 .stTabs [data-baseweb="tab-list"] {{
     gap: 4px; background: var(--bg-surface); border-radius: 14px; padding: 5px; border: 1px solid var(--border-subtle);
 }}
-.stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; }}
+.stTabs [data-baseweb="tab"] {{ border-radius: 10px; font-weight: 600; font-size: 0.82rem; color: #A3C4DC !important; }}
 .stTabs [aria-selected="true"] {{
     background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
 }}
@@ -196,10 +200,13 @@ div[data-testid="stTabs"] > div:first-child {{
     background: var(--bg-surface) !important; border-radius: 14px !important; padding: 5px !important; border: 1px solid var(--border-subtle) !important; gap: 4px !important;
 }}
 button[data-baseweb="tab"] {{
-    border-radius: 10px !important; font-weight: 600 !important; font-size: 0.82rem !important; margin-right: 4px !important;
+    border-radius: 10px !important; font-weight: 600 !important; font-size: 0.82rem !important; margin-right: 4px !important; color: #A3C4DC !important;
 }}
 button[data-baseweb="tab"][aria-selected="true"] {{
     background: linear-gradient(135deg, var(--pln-blue), var(--pln-power)) !important; color: white !important;
+}}
+div[data-testid="stTabs"] button p {{
+    color: inherit !important;
 }}
 
 [data-testid="stAlert"] {{
