@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.maghes_verification_requests (
     updated_at timestamptz NOT NULL DEFAULT now(),
     reviewer text,
     published_id bigint,
+    published_score numeric(5,1),
     request_notified_at timestamptz,
     result_notified_at timestamptz
 );
