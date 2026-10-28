@@ -344,9 +344,9 @@ if not st.session_state["logged_in"]:
     col_l, col_c, col_r = st.columns([1.5, 1, 1.5])
     with col_c:
         with st.form("login_form"):
-            input_user = st.text_input("Username Database").strip()
+            input_user = st.text_input("Username MAGHES").strip()
             input_pass = st.text_input("Password", type="password")
-            submit = st.form_submit_button("⚡ Hubungkan ke Server ⚡", use_container_width=True)
+            submit = st.form_submit_button("⚡ Masuk MAGHES ⚡", use_container_width=True)
             if submit:
                 if authenticate(USERS_DB, input_user, input_pass):
                     engine = get_public_engine()
