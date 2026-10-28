@@ -61,8 +61,9 @@ def list_requests(engine, username, account):
 
 def _mail_config():
     try:
-        return (st.secrets["GMAIL_SENDER"], st.secrets["GMAIL_APP_PASSWORD"],
-                st.secrets["REVIEWER_EMAIL"])
+        return (st.secrets.get("GMAIL_SENDER", "regagisjateng@gmail.com"),
+                st.secrets["GMAIL_APP_PASSWORD"],
+                st.secrets.get("REVIEWER_EMAIL", "rega.syahrul@gmail.com"))
     except (KeyError, FileNotFoundError):
         return None
 
