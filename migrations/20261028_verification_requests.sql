@@ -24,3 +24,11 @@ CREATE INDEX IF NOT EXISTS maghes_requests_recent
     ON public.maghes_verification_requests(requested_at DESC);
 -- Berikan SELECT/INSERT ke role koneksi MAGHES publik, SELECT/UPDATE ke role sinkronisasi UID.
 -- Jangan memberikan UPDATE status kepada role koneksi MAGHES publik.
+
+-- Rapor baru disembunyikan sampai seluruh batch error berhasil diunggah.
+ALTER TABLE public.tbl_published_verifications
+    ADD COLUMN IF NOT EXISTS is_complete boolean NOT NULL DEFAULT true;
+ALTER TABLE public.tbl_published_verifications
+    ADD COLUMN IF NOT EXISTS request_id uuid REFERENCES public.maghes_verification_requests(id);
+CREATE INDEX IF NOT EXISTS maghes_published_request_id
+    ON public.tbl_published_verifications(request_id);
