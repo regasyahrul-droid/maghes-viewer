@@ -14,10 +14,19 @@ TABLE_RE = re.compile(r"^(?:20\d{4}|20\d{6})_ADD_[A-Za-z0-9_]+$", re.I)
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
+def enabled_submission_schemas():
+    try:
+        values = st.secrets["SUBMISSION_SCHEMAS"]
+    except Exception:
+        values = ["semarang_5217"]
+    return {str(value).strip() for value in values if SCHEMA_RE.fullmatch(str(value).strip())}
+
+
 def assigned_schemas(role, schema):
-    # UID admin sees reports for all UP3, but a submission always needs
-    # a specific assigned UP3. No wildcard/schema substring matching.
-    return [s for s in (x.strip() for x in schema.split(",")) if SCHEMA_RE.fullmatch(s)]
+    # Pilot submissions are limited independently of report viewing rights.
+    enabled = enabled_submission_schemas()
+    return [s for s in (x.strip() for x in schema.split(","))
+            if SCHEMA_RE.fullmatch(s) and s in enabled]
 
 
 def submit_request(engine, username, account, schema, table, expected_rows, notes):
