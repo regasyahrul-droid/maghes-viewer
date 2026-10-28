@@ -23,8 +23,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS maghes_one_open_request_per_table
     WHERE status IN ('DIAJUKAN','SEDANG_DIVERIFIKASI','GAGAL_PUBLIKASI');
 CREATE INDEX IF NOT EXISTS maghes_requests_recent
     ON public.maghes_verification_requests(requested_at DESC);
--- Berikan SELECT/INSERT ke role koneksi MAGHES publik, SELECT/UPDATE ke role sinkronisasi UID.
--- Jangan memberikan UPDATE status kepada role koneksi MAGHES publik.
+-- Berikan SELECT/INSERT dan UPDATE kolom request_notified_at saja ke role MAGHES publik.
+-- Role sinkronisasi UID memerlukan SELECT/UPDATE atas status, reviewer, published_id,
+-- published_score, result_notified_at, dan updated_at. Jangan berikan UPDATE status
+-- ke role MAGHES publik.
 
 -- Rapor baru disembunyikan sampai seluruh batch error berhasil diunggah.
 ALTER TABLE public.tbl_published_verifications
