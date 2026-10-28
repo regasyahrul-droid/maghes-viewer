@@ -1,6 +1,6 @@
-# Pengajuan verifikasi MAGHES publik
+# Pengajuan verifikasi MAGHES publik — pilot UP3 Semarang
 
-Perubahan ini disiapkan untuk alur admin UP3 → verifikator UID → hasil publik. Branch ini **belum boleh digabung ke main** sebelum prasyarat berikut dipenuhi, karena login baru membaca akun dari Streamlit secrets dan halaman hasil baru membaca kolom `is_complete`.
+Perubahan ini disiapkan untuk alur admin UP3 → verifikator UID → hasil publik. Pilot pertama hanya mengizinkan schema `semarang_5217` mengajukan; akun UP3 lain tetap dapat membaca hasil sesuai haknya. Branch ini **belum boleh digabung ke main** sebelum prasyarat berikut dipenuhi, karena login baru membaca akun dari Streamlit secrets dan halaman hasil baru membaca kolom `is_complete`.
 
 ## Prasyarat penerapan
 
@@ -10,12 +10,13 @@ Perubahan ini disiapkan untuk alur admin UP3 → verifikator UID → hasil publi
    - `GMAIL_SENDER`: alamat Gmail pengirim yang disepakati.
    - `GMAIL_APP_PASSWORD`: sandi aplikasi Gmail khusus MAGHES; jangan gunakan sandi login Gmail biasa.
    - `REVIEWER_EMAIL`: alamat email verifikator UID.
-   - `accounts.<username>.password_hash`, `role`, `schema`, dan `email` untuk setiap akun admin UP3. Email akun harus terverifikasi oleh pengelola sebelum notifikasi hasil dipakai.
+   - `SUBMISSION_SCHEMAS = ["semarang_5217"]` untuk membatasi pengajuan pilot.
+   - `accounts.<username>.password_hash`, `role`, `schema`, dan `email` untuk akun publik. Email pengaju pilot diatur pada akun Semarang. Email akun harus terverifikasi oleh pengelola sebelum notifikasi hasil dipakai.
 3. Beri role database aplikasi publik izin SELECT/INSERT pada `maghes_verification_requests`, dan UPDATE terbatas pada `request_notified_at`. Akun sinkronisasi UID perlu SELECT/UPDATE status dan metadata hasil. Aplikasi publik tidak boleh mengubah status verifikasi.
 4. Pada MAGHES intranet, sediakan `MAGHES_GMAIL_SENDER` dan `MAGHES_GMAIL_APP_PASSWORD` lewat environment proses atau konfigurasi privat terenkripsi. Server UID harus bisa mengakses SMTP Gmail di port 587.
 5. Pastikan hash akun publik cocok dengan password yang akan tetap dipakai. Kredensial lama pernah berada di histori repo yang public; rencanakan rotasi akun publik dan koneksi database. Jangan menyalin password lama ke commit baru.
 
-Pengelola PC mempunyai template rahasia lokal di `C:/Users/regag/.maghes/public-viewer-secrets-template.toml`. File itu berisi hash dari konfigurasi privat MAGHES lokal dan placeholder untuk email UP3. Jangan commit atau kirim file tersebut ke GitHub. Nilai database dan sandi aplikasi Gmail masih perlu diisi melalui Streamlit Cloud Secrets.
+Pengelola PC mempunyai template rahasia lokal di `C:/Users/regag/.maghes/public-viewer-secrets-template.toml`. File itu berisi hash dari konfigurasi privat MAGHES lokal dan email pilot Semarang. Email UP3 lain masih kosong. Jangan commit atau kirim file tersebut ke GitHub. Nilai database dan sandi aplikasi Gmail masih perlu diisi melalui Streamlit Cloud Secrets.
 
 ## Alur
 
