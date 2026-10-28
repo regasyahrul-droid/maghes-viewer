@@ -34,13 +34,10 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 # ==========================================
 # USER DATABASE (sama persis dengan MAGHES internal)
 # ==========================================
-USERS_DB = {
-    "rega.syahrul": {"pass": "aheadfinelattedoubleshoot", "role": "admin", "schema": "master_jateng"},
-    "user_semarang": {"pass": "smg_dist2026", "role": "viewer", "schema": "semarang_5217"},
-    "user_purwokerto": {"pass": "pwt_dist2026", "role": "viewer", "schema": "purwokerto_5215"},
-    "user_cilacap": {"pass": "clp_dist2026", "role": "viewer", "schema": "cilacap_5221"},
-    "user_sukoharjo": {"pass": "skh_dist2026", "role": "viewer", "schema": "sukoharjo_5223"},
-}
+from viewer_auth import load_accounts, authenticate
+from viewer_submissions import render_submission_portal
+
+USERS_DB = load_accounts()
 
 # ==========================================
 # PAGE CONFIG
@@ -69,30 +66,19 @@ if "logged_in" not in st.session_state:
 # ==========================================
 # SUPABASE ENGINE
 # ==========================================
-DEFAULT_DB_URL = "postgresql://postgres.jhwdbhhkmonxvuzoiheo:gisjateng2026@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres"
 
 @st.cache_resource
 def get_public_engine():
     try:
-        db_url = st.secrets.get("DATABASE_URL", DEFAULT_DB_URL)
-    except Exception:
-        db_url = DEFAULT_DB_URL
-        
-    if not db_url or "PASSWORD" in db_url:
-        db_url = DEFAULT_DB_URL
-        
-    # BARIS YANG DIUBAH (tambah +psycopg2)
+        db_url = st.secrets["SUPABASE_DB_URL"]
+    except (KeyError, FileNotFoundError):
+        return None
     if db_url.startswith("postgres://"):
         db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
     elif db_url.startswith("postgresql://"):
         db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-        
-    return create_engine(db_url)
+    return create_engine(db_url, pool_pre_ping=True)
 
-
-# ==========================================
-# CSS THEME (Identik dengan MAGHES Internal)
-# ==========================================
 def inject_css():
     st.markdown(f"""
 <style>
@@ -362,7 +348,7 @@ if not st.session_state["logged_in"]:
             input_pass = st.text_input("Password", type="password")
             submit = st.form_submit_button("⚡ Hubungkan ke Server ⚡", use_container_width=True)
             if submit:
-                if input_user in USERS_DB and input_pass == USERS_DB[input_user]["pass"]:
+                if authenticate(USERS_DB, input_user, input_pass):
                     engine = get_public_engine()
                     if engine:
                         st.session_state.update({
@@ -374,7 +360,7 @@ if not st.session_state["logged_in"]:
                     else:
                         st.error("Database Publik belum dikonfigurasi.")
                 else:
-                    st.error("Username atau Password ditolak!")
+                    st.error("Username atau password tidak cocok, atau akun publik belum dikonfigurasi.")
 
     render_footer("login")
 
@@ -483,6 +469,9 @@ else:
     if not engine:
         st.error("Database publik belum dikonfigurasi.")
         st.stop()
+
+    render_submission_portal(engine, db_user, current_role, user_schema, USERS_DB.get(db_user, {}))
+    st.markdown("---")
 
     if selected_verif_id is None:
         st.info("📌 Pilih hasil verifikasi dari sidebar untuk melihat detailnya.")
