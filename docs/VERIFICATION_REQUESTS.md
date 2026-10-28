@@ -2,6 +2,8 @@
 
 Perubahan ini disiapkan untuk alur admin UP3 → verifikator UID → hasil publik. Pilot pertama hanya mengizinkan schema `semarang_5217` mengajukan; akun UP3 lain tetap dapat membaca hasil sesuai haknya. Branch ini **belum boleh digabung ke main** sebelum prasyarat berikut dipenuhi, karena login baru membaca akun dari Streamlit secrets dan halaman hasil baru membaca kolom `is_complete`.
 
+Penerima email tidak memberikan password Gmail kepada MAGHES. Mereka membuka Gmail melalui halaman Google sendiri; tautan rapor memerlukan login akun MAGHES publik. Hanya layanan pengirim otomatis yang memerlukan otorisasi privat, tanpa meminta password Gmail penerima di aplikasi atau chat.
+
 ## Prasyarat penerapan
 
 1. Jalankan `migrations/20261028_verification_requests.sql` pada database publik dengan akun migrasi. Periksa skema tabel hasil yang sudah ada dan hak role sebelum menjalankan.
