@@ -31,8 +31,10 @@ class WorkflowTests(unittest.TestCase):
         engine = MagicMock()
         engine.begin.return_value.__enter__.return_value.execute.return_value.scalar_one_or_none.return_value = "request-id"
         account = {"schema": "cilacap_5221", "role": "viewer", "email": "example@example.com"}
-        self.assertEqual(submit_request(engine, "up3", account, "cilacap_5221",
-                                        "202610_ADD_APP", 42, ""), "request-id")
+        request_id = submit_request(engine, "up3", account, "cilacap_5221",
+                                    "202610_ADD_APP", 42, "")
+        self.assertEqual(len(request_id), 36)
+        self.assertEqual(engine.begin.return_value.__enter__.return_value.execute.call_args.args[1]["id"], request_id)
 
 
 if __name__ == "__main__":
