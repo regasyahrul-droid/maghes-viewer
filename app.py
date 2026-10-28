@@ -405,16 +405,16 @@ else:
         # Load list of published verifications
         try:
             if current_role == "admin":
-                df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
+                df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
             else:
                 schemas_list = [s.strip() for s in user_schema.split(',')]
                 if len(schemas_list) > 1:
-                    conditions = " OR ".join([f"schema_name LIKE :schema_{i}" for i in range(len(schemas_list))])
-                    params = {f"schema_{i}": f"%{s}%" for i, s in enumerate(schemas_list)}
-                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE {conditions} ORDER BY schema_name, tabel_sumber, published_at DESC")
+                    conditions = " OR ".join([f"schema_name = :schema_{i}" for i in range(len(schemas_list))])
+                    params = {f"schema_{i}": s for i, s in enumerate(schemas_list)}
+                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true AND ({conditions}) ORDER BY schema_name, tabel_sumber, published_at DESC")
                     df_verif = pd.read_sql(q, engine, params=params)
                 else:
-                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name LIKE :schema ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": f"%{user_schema}%"})
+                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name = :schema AND is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": user_schema})
             # Sort again by published_at DESC for display
             df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
         except Exception:
