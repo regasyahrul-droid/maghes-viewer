@@ -35,7 +35,7 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 # USER DATABASE (sama persis dengan MAGHES internal)
 # ==========================================
 from viewer_auth import load_accounts, authenticate
-from viewer_submissions import render_submission_portal
+from viewer_submissions import render_submission_portal, table_month
 
 USERS_DB = load_accounts()
 
@@ -402,37 +402,58 @@ else:
 
         st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
-        # Load list of published verifications
-        try:
-            if current_role == "admin":
-                df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
-            else:
-                schemas_list = [s.strip() for s in user_schema.split(',')]
-                if len(schemas_list) > 1:
-                    conditions = " OR ".join([f"schema_name = :schema_{i}" for i in range(len(schemas_list))])
-                    params = {f"schema_{i}": s for i, s in enumerate(schemas_list)}
-                    q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true AND ({conditions}) ORDER BY schema_name, tabel_sumber, published_at DESC")
-                    df_verif = pd.read_sql(q, engine, params=params)
-                else:
-                    df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name = :schema AND is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": user_schema})
-            # Sort again by published_at DESC for display
-            df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
-        except Exception:
-            df_verif = pd.DataFrame()
+        menu = st.radio(
+            "Menu MAGHES",
+            ["📨 Ajukan Verifikasi", "📋 Lihat Verifikasi"],
+            key="maghes_public_menu",
+        )
+        st.markdown('<div class="sidebar-divider"></div>', unsafe_allow_html=True)
 
-        if df_verif.empty:
-            st.warning("Belum ada data verifikasi yang di-publish.")
-            selected_verif_id = None
-        else:
-            st.markdown("##### 📋 Pilih Hasil Verifikasi")
-            options = df_verif['id'].tolist()
-            format_map = {row['id']: f"{row['schema_name']}.{row['tabel_sumber']} ({row['layer_type']})" for _, row in df_verif.iterrows()}
-            selected_verif_id = st.selectbox(
-                "Tabel Target:",
-                options,
-                format_func=lambda x: format_map.get(x, str(x)),
-                label_visibility="collapsed"
-            )
+        selected_verif_id = None
+        df_verif = pd.DataFrame()
+        if menu == "📋 Lihat Verifikasi":
+            # Load list of published verifications
+            try:
+                if current_role == "admin":
+                    df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
+                else:
+                    schemas_list = [s.strip() for s in user_schema.split(',')]
+                    if len(schemas_list) > 1:
+                        conditions = " OR ".join([f"schema_name = :schema_{i}" for i in range(len(schemas_list))])
+                        params = {f"schema_{i}": s for i, s in enumerate(schemas_list)}
+                        q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true AND ({conditions}) ORDER BY schema_name, tabel_sumber, published_at DESC")
+                        df_verif = pd.read_sql(q, engine, params=params)
+                    else:
+                        df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name = :schema AND is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": user_schema})
+                # Sort again by published_at DESC for display
+                df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
+            except Exception:
+                df_verif = pd.DataFrame()
+    
+            if df_verif.empty:
+                st.warning("Belum ada hasil verifikasi yang tersedia.")
+            else:
+                df_verif["bulan_data"] = df_verif["tabel_sumber"].map(table_month)
+                months = sorted(df_verif["bulan_data"].dropna().unique(), reverse=True)
+                if df_verif["bulan_data"].isna().any():
+                    months.append("Tanpa bulan")
+                selected_month = st.selectbox(
+                    "Bulan data", months, key="maghes_result_month"
+                )
+                month_value = None if selected_month == "Tanpa bulan" else selected_month
+                df_verif = df_verif[df_verif["bulan_data"].isna() if month_value is None
+                                    else df_verif["bulan_data"].eq(month_value)].copy()
+                st.markdown("##### 📋 Pilih Hasil Verifikasi")
+                options = df_verif["id"].tolist()
+                format_map = {
+                    row["id"]: f"{row['schema_name']}.{row['tabel_sumber']} ({row['layer_type']})"
+                    for _, row in df_verif.iterrows()
+                }
+                selected_verif_id = st.selectbox(
+                    "Tabel / layer", options,
+                    format_func=lambda value: format_map.get(value, str(value)),
+                    key="maghes_result_table",
+                )
 
         # Globe animation (same as main MAGHES)
         st.markdown("""
@@ -459,7 +480,7 @@ else:
         <div style="display: flex; align-items: center;">
             {header_logo}
             <div>
-                <h1>MAGHES: Dashboard Hasil Verifikasi</h1>
+                <h1>MAGHES: {menu[2:].strip()}</h1>
                 <p>Mode: Public Viewer (Internet) | User: <b style="color:#7CC242;">{db_user.upper()}</b> | Schema: {user_schema}</p>
             </div>
         </div>
@@ -470,9 +491,14 @@ else:
         st.error("Database publik belum dikonfigurasi.")
         st.stop()
 
-    render_submission_portal(engine, db_user, current_role, user_schema, USERS_DB.get(db_user, {}))
-    st.markdown("---")
+    if menu == "📨 Ajukan Verifikasi":
+        render_submission_portal(
+            engine, db_user, current_role, user_schema, USERS_DB.get(db_user, {})
+        )
+        render_footer()
+        st.stop()
 
+    st.markdown("### 📋 Lihat Verifikasi")
     if selected_verif_id is None:
         st.info("📌 Pilih hasil verifikasi dari sidebar untuk melihat detailnya.")
         render_footer()
