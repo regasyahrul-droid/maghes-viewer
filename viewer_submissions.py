@@ -7,11 +7,37 @@ from email.message import EmailMessage
 import pandas as pd
 import streamlit as st
 from sqlalchemy import bindparam, text
-from sqlalchemy.exc import IntegrityError
 
 SCHEMA_RE = re.compile(r"^[a-z]+_[0-9]{4}$")
 TABLE_RE = re.compile(r"^(?:20\d{4}|20\d{6})_ADD_[A-Za-z0-9_]+$", re.I)
+PERIOD_RE = re.compile(r"^20\d{2}(?:0[1-9]|1[0-2])$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+ASSET_TYPES = (
+    "APP",
+    "ARRESTER",
+    "BUSBAR_GHGD",
+    "CO",
+    "EV_CHARGER",
+    "GARDU_DISTRIBUSI",
+    "ISOLATOR",
+    "JOINTING",
+    "JTM",
+    "JTR",
+    "LVCABLE",
+    "MVCABLE",
+    "MVCELL_GDGH",
+    "PERALATAN_TIANG_LAIN",
+    "PHB_SR",
+    "PHBTR",
+    "PLTS_ATAP",
+    "STASIUN_PENGISIAN_LISTRIK",
+    "STLTM",
+    "STLTR",
+    "SWITCHING",
+    "TIANG",
+    "TRAFO",
+)
 
 
 def enabled_submission_schemas():
@@ -29,29 +55,51 @@ def assigned_schemas(role, schema):
             if SCHEMA_RE.fullmatch(s) and s in enabled]
 
 
-def submit_request(engine, username, account, schema, table, expected_rows, notes):
+def build_table_name(period, asset_type):
+    period = str(period).strip()
+    asset_type = str(asset_type).strip().upper()
+    if not PERIOD_RE.fullmatch(period):
+        raise ValueError("Bulan data harus memakai format YYYYMM, misalnya 202610.")
+    if asset_type not in ASSET_TYPES:
+        raise ValueError("Jenis tabel tidak tersedia pada daftar pengajuan.")
+    return f"{period}_ADD_{asset_type}"
+
+
+def submit_requests(engine, username, account, schema, tables, notes):
     allowed = assigned_schemas(account.get("role", ""), account.get("schema", ""))
     email = str(account.get("email", "")).strip().lower()
-    table = table.strip()
-    if schema not in allowed or not TABLE_RE.fullmatch(table):
-        raise ValueError("Schema atau nama tabel pengajuan tidak sesuai.")
+    tables = list(dict.fromkeys(str(table).strip().upper() for table in tables))
+    if schema not in allowed or not tables:
+        raise ValueError("Pilih UP3 dan minimal satu jenis tabel.")
+    if not all(TABLE_RE.fullmatch(table) for table in tables):
+        raise ValueError("Nama tabel pengajuan tidak sesuai.")
     if not EMAIL_RE.fullmatch(email):
         raise ValueError("Alamat email akun belum dikonfigurasi.")
-    if expected_rows is not None and expected_rows < 0:
-        raise ValueError("Jumlah record tidak valid.")
-    request_id = str(uuid4())
+
+    requests = []
     with engine.begin() as conn:
-        row = conn.execute(text("""
-            INSERT INTO public.maghes_verification_requests
-              (id, schema_name, table_name, requested_by, requester_email, expected_rows, notes)
-            VALUES (:id, :schema, :table, :username, :email, :rows, :notes)
-            ON CONFLICT DO NOTHING RETURNING id
-        """), {"id": request_id, "schema": schema, "table": table,
-                "username": username, "email": email, "rows": expected_rows,
-                "notes": notes.strip()[:500]}).scalar_one_or_none()
-    if row is None:
-        raise ValueError("Tabel ini masih mempunyai pengajuan aktif. Lihat statusnya di bawah.")
-    return request_id
+        for table in tables:
+            request_id = str(uuid4())
+            row = conn.execute(text("""
+                INSERT INTO public.maghes_verification_requests
+                  (id, schema_name, table_name, requested_by, requester_email, notes)
+                VALUES (:id, :schema, :table, :username, :email, :notes)
+                ON CONFLICT DO NOTHING RETURNING id
+            """), {"id": request_id, "schema": schema, "table": table,
+                    "username": username, "email": email,
+                    "notes": notes.strip()[:500]}).scalar_one_or_none()
+            if row is None:
+                raise ValueError(
+                    f"{table} masih mempunyai pengajuan aktif. "
+                    "Tidak ada pilihan baru yang disimpan."
+                )
+            requests.append((request_id, table))
+    return requests
+
+
+def submit_request(engine, username, account, schema, table, expected_rows, notes):
+    """Kompatibilitas pemanggil lama; pengajuan baru tidak meminta jumlah record."""
+    return submit_requests(engine, username, account, schema, [table], notes)[0][0]
 
 
 def list_requests(engine, username, account):
@@ -85,10 +133,12 @@ def notify_reviewer(engine, request_id, schema, table, username, rows, notes):
     msg["From"] = sender
     msg["To"] = reviewer
     msg["Subject"] = f"[MAGHES] Pengajuan verifikasi {schema}.{table}"
+    rows_line = f"Perkiraan record: {rows}\n" if rows is not None else ""
     msg.set_content(
         f"Pengajuan: {request_id}\nUP3: {schema}\nTabel: {table}\n"
-        f"Pengaju: {username}\nPerkiraan record: {rows if rows is not None else 'belum diisi'}\n"
-        f"Catatan: {notes[:500]}\n\nBuka antrean MAGHES internal untuk memeriksa data."
+        f"Pengaju: {username}\n{rows_line}"
+        f"Catatan: {notes[:500] or '-'}\n\n"
+        "Buka antrean MAGHES internal untuk memeriksa data."
     )
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
@@ -108,7 +158,10 @@ def notify_reviewer(engine, request_id, schema, table, username, rows, notes):
 
 def render_submission_portal(engine, username, role, schema, account):
     st.markdown("### 📨 Ajukan Verifikasi")
-    st.caption("Selesaikan upload di QGIS dahulu, lalu catat tabelnya di sini. Tim UID akan memeriksa data di intranet.")
+    st.caption(
+        "Selesaikan upload di QGIS dahulu. Pilih bulan dan jenis data yang sudah "
+        "selesai diunggah; tim UID akan memeriksanya melalui intranet."
+    )
     allowed = assigned_schemas(role, schema)
     if not allowed:
         st.info("Akun ini belum memiliki penugasan UP3 untuk membuat pengajuan.")
@@ -116,42 +169,84 @@ def render_submission_portal(engine, username, role, schema, account):
     if not EMAIL_RE.fullmatch(str(account.get("email", "")).strip()):
         st.warning("Email akun UP3 belum diatur. Hubungi pengelola MAGHES sebelum mengajukan.")
         return
+
     with st.form("maghes_request_form", clear_on_submit=True):
-        selected = st.selectbox("UP3", allowed)
-        table = st.text_input("Nama tabel yang selesai diunggah melalui QGIS",
-                              placeholder="202610_ADD_APP")
-        count_text = st.text_input("Perkiraan jumlah record (opsional)", placeholder="Contoh: 72000")
-        notes = st.text_area("Catatan untuk verifikator (opsional)", max_chars=500)
+        selected_schema = st.selectbox("1. UP3", allowed)
+        period = st.text_input(
+            "2. Data Bulan Apa",
+            placeholder="Contoh: 202610",
+            max_chars=6,
+            help="Gunakan enam angka: tahun dan bulan (YYYYMM).",
+        )
+        st.markdown("**3. Tabel yang selesai diunggah melalui QGIS**")
+        st.caption("Centang satu atau beberapa jenis aset.")
+        columns = st.columns(3)
+        selected_assets = []
+        for index, asset_type in enumerate(ASSET_TYPES):
+            with columns[index % 3]:
+                if st.checkbox(asset_type, key=f"request_asset_{asset_type}"):
+                    selected_assets.append(asset_type)
+        notes = st.text_area(
+            "4. Catatan untuk Verifikator",
+            placeholder=(
+                "Contoh: Masih ada kekurangan; data tambahan akan diunggah menyusul."
+            ),
+            max_chars=500,
+        )
         submitted = st.form_submit_button("📨 Ajukan Verifikasi", type="primary")
+
     if submitted:
         try:
-            rows = int(count_text) if count_text.strip() else None
-            request_id = submit_request(engine, username, account, selected, table, rows, notes)
-            mailed = notify_reviewer(engine, request_id, selected, table.strip(), username, rows, notes)
-            st.success("Pengajuan tersimpan dan masuk antrean UID." +
-                       (" Email pemberitahuan terkirim." if mailed else
-                        " Email belum terkirim; pengajuan tetap terlihat di antrean UID."))
+            tables = [build_table_name(period, asset) for asset in selected_assets]
+            requests = submit_requests(
+                engine, username, account, selected_schema, tables, notes
+            )
+            sent = 0
+            for request_id, table in requests:
+                if notify_reviewer(
+                    engine, request_id, selected_schema, table,
+                    username, None, notes
+                ):
+                    sent += 1
+            message = f"{len(requests)} pengajuan tersimpan dan masuk antrean UID."
+            if sent == len(requests):
+                message += " Semua email pemberitahuan terkirim."
+            elif sent:
+                message += f" Email terkirim: {sent} dari {len(requests)}."
+            else:
+                message += " Email belum terkirim; pengajuan tetap terlihat di antrean UID."
+            st.success(message)
         except ValueError as exc:
             st.error(str(exc))
         except Exception:
             st.error("Pengajuan belum tersimpan. Periksa koneksi atau hubungi pengelola.")
+
     try:
         history = list_requests(engine, username, account)
         if not history.empty:
             st.markdown("#### Status pengajuan saya")
-            st.dataframe(history[["schema_name", "table_name", "expected_rows",
-                                  "status", "requested_at", "updated_at"]],
-                         use_container_width=True, hide_index=True)
+            st.dataframe(
+                history[["schema_name", "table_name", "status",
+                         "requested_at", "updated_at"]],
+                use_container_width=True,
+                hide_index=True,
+            )
             if _mail_config():
-                pending = history[history["request_notified_at"].isna() &
-                                  (history["status"] == "DIAJUKAN")]
+                pending = history[
+                    history["request_notified_at"].isna()
+                    & (history["status"] == "DIAJUKAN")
+                ]
                 if not pending.empty and st.button("Kirim ulang email pengajuan yang tertunda"):
                     sent = 0
                     for _, item in pending.iterrows():
-                        if notify_reviewer(engine, str(item["id"]), item["schema_name"],
-                                           item["table_name"], username,
-                                           item["expected_rows"], ""):
+                        if notify_reviewer(
+                            engine, str(item["id"]), item["schema_name"],
+                            item["table_name"], username, None, ""
+                        ):
                             sent += 1
                     st.info(f"Email terkirim: {sent} dari {len(pending)} pengajuan.")
     except Exception:
-        st.info("Riwayat pengajuan belum tersedia; minta pengelola menjalankan migrasi tabel pengajuan.")
+        st.info(
+            "Riwayat pengajuan belum tersedia; "
+            "minta pengelola menjalankan migrasi tabel pengajuan."
+        )
