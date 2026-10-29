@@ -1,11 +1,12 @@
 import base64
 import hashlib
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from viewer_auth import authenticate
 from viewer_submissions import (
     ASSET_TYPES,
+    notify_reviewer_batch,
     table_month,
     assigned_schemas,
     build_table_name,
@@ -48,6 +49,24 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(table_month("202609_ADD_APP"), "202609")
         self.assertIsNone(table_month("MASTER_APP"))
         self.assertIsNone(table_month("202613_ADD_APP"))
+
+    def test_six_layers_send_one_email_and_mark_all_requests(self):
+        requests = [(str(index), f"202610_ADD_{asset}") for index, asset in
+                    enumerate(("APP", "TRAFO", "TIANG", "JTR", "JTM", "STLTR"))]
+        engine = MagicMock()
+        with patch("viewer_submissions._mail_config", return_value=(
+                "sender@example.com", "test-only", "reviewer@example.com")), \
+             patch("viewer_submissions.smtplib.SMTP") as smtp:
+            self.assertTrue(notify_reviewer_batch(
+                engine, requests, "semarang_5217", "up3", "Tambahan menyusul"))
+        server = smtp.return_value.__enter__.return_value
+        server.send_message.assert_called_once()
+        message = server.send_message.call_args.args[0]
+        self.assertIn("Oktober 2026", message["Subject"])
+        for _, table in requests:
+            self.assertIn(table, message.get_content())
+        self.assertEqual(engine.begin.return_value.__enter__.return_value.execute.call_args.args[1]["ids"],
+                         [item[0] for item in requests])
 
     def test_submission_scope(self):
         self.assertEqual(assigned_schemas("viewer", "semarang_5217,cilacap_5221"),
