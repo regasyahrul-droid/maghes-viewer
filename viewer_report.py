@@ -191,8 +191,10 @@ def render_report(record, render_card, legacy_errors=None):
             geo = snapshot.get('error_geojson', {})
             if geo.get('features'):
                 # Apply the same record/rule filter to the geometry export.
-                allowed = {(str(r.get('objectid')), r.get('rule_dilanggar')) for r in shown.to_dict('records')}
-                features = [f for f in geo['features'] if (str(f['properties'].get('objectid')), f['properties'].get('rule')) in allowed]
+                allowed = {(str(r.get('objectid')), r.get('rule_dilanggar'), r.get('jenis_error'), r.get('status_revisi'))
+                           for r in shown.to_dict('records')}
+                features = [f for f in geo['features'] if (str(f['properties'].get('objectid')), f['properties'].get('rule'),
+                            f['properties'].get('jenis_error'), f['properties'].get('status_revisi')) in allowed]
                 filtered_geo = {'type': 'FeatureCollection', 'features': features}
                 st.download_button('Download GeoJSON (QGIS)', json.dumps(filtered_geo),
                                    f'error_log_{table}.geojson', 'application/geo+json', key=f'geo_{key}')
@@ -205,7 +207,7 @@ def render_report(record, render_card, legacy_errors=None):
                             get_fill_color=[230, 60, 60, 160], get_line_color=[230, 60, 60],
                             point_radius_min_pixels=5, line_width_min_pixels=2)],
                             initial_view_state=pdk.ViewState(latitude=-7.15, longitude=110.14, zoom=8),
-                            tooltip={'text': 'ID: {objectid}\nRule: {rule}\nDetail: {detail}'},
+                            tooltip={'text': 'ID: {properties.objectid}\nRule: {properties.rule}\nDetail: {properties.detail}'},
                             map_style='light'))
             if snapshot.get('geometry_note'):
                 st.warning(snapshot['geometry_note'])
