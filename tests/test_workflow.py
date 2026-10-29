@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import unittest
 from unittest.mock import MagicMock
@@ -7,15 +8,34 @@ from viewer_submissions import assigned_schemas, submit_request
 
 
 class WorkflowTests(unittest.TestCase):
-    def test_password_hash_and_scope(self):
+    @staticmethod
+    def _digest(password):
         salt = bytes(range(16))
-        digest = hashlib.scrypt(b"example-only", salt=salt, n=16384, r=8, p=5, dklen=32)
-        encoded = "scrypt$16384$8$5$" + salt.hex() + "$" + digest.hex()
+        digest = hashlib.scrypt(password, salt=salt, n=16384, r=8, p=5, dklen=32)
+        return salt, digest
+
+    def test_password_hash_base64_matches_maghes_private_config(self):
+        salt, digest = self._digest(b"example-only")
+        encoded = (
+            "scrypt$16384$8$5$"
+            + base64.b64encode(salt).decode()
+            + "$"
+            + base64.b64encode(digest).decode()
+        )
         accounts = {"up3": {"password_hash": encoded,
                             "schema": "cilacap_5221", "role": "viewer"}}
         self.assertIsNotNone(authenticate(accounts, "up3", "example-only"))
         self.assertIsNone(authenticate(accounts, "up3", "wrong"))
         self.assertIsNone(authenticate(accounts, "unknown", "example-only"))
+
+    def test_legacy_hex_password_hash_remains_supported(self):
+        salt, digest = self._digest(b"example-only")
+        encoded = "scrypt$16384$8$5$" + salt.hex() + "$" + digest.hex()
+        accounts = {"up3": {"password_hash": encoded,
+                            "schema": "cilacap_5221", "role": "viewer"}}
+        self.assertIsNotNone(authenticate(accounts, "up3", "example-only"))
+
+    def test_submission_scope(self):
         self.assertEqual(assigned_schemas("viewer", "semarang_5217,cilacap_5221"),
                          ["semarang_5217"])
 
