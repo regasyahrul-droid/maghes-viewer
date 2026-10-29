@@ -35,7 +35,7 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 # USER DATABASE (sama persis dengan MAGHES internal)
 # ==========================================
 from viewer_auth import load_accounts, authenticate
-from viewer_submissions import render_submission_portal, table_month
+from viewer_submissions import render_submission_portal, table_month, month_label
 
 USERS_DB = load_accounts()
 
@@ -438,7 +438,7 @@ else:
                 if df_verif["bulan_data"].isna().any():
                     months.append("Tanpa bulan")
                 selected_month = st.selectbox(
-                    "Bulan data", months, key="maghes_result_month"
+                    "Bulan Validasi", months, format_func=month_label, key="maghes_result_month"
                 )
                 month_value = None if selected_month == "Tanpa bulan" else selected_month
                 df_verif = df_verif[df_verif["bulan_data"].isna() if month_value is None
