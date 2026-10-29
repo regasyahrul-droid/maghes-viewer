@@ -3,6 +3,7 @@ import unittest
 
 from streamlit.testing.v1 import AppTest
 from viewer_report import unpack, duplicate_rules
+from rule_guidance import guidance_markdown
 
 
 def fixture():
@@ -58,6 +59,13 @@ render_report(st.session_state['record'], lambda title, score: f'<p>{title}: {sc
         rules = duplicate_rules(snapshot, 'geometry')
         self.assertEqual(len(rules), 1)
         self.assertEqual(next(iter(rules.values()))[0], 2)
+
+    def test_public_conductor_guidance_matches_qa_rule(self):
+        text = guidance_markdown('Tiang vs JTM Conductor Mismatch')
+        self.assertIn('kode_hantaran', text)
+        self.assertIn('description JTM', text)
+        self.assertIn('ST_Intersects', text)
+        self.assertIsNone(guidance_markdown('Gardu Tanpa Tiang'))
 
 
 if __name__ == '__main__':
