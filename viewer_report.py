@@ -5,6 +5,11 @@ import numbers
 import pandas as pd
 import streamlit as st
 
+try:
+    from .rule_guidance import guidance_markdown
+except ImportError:  # Streamlit Cloud memuat modul ini dari root repo publik.
+    from rule_guidance import guidance_markdown
+
 
 def unpack(value, default=None):
     if isinstance(value, (dict, list)):
@@ -55,6 +60,10 @@ def render_rules(summary, details, prefix, table, errors):
             st.error(f'{label}: {value:,.0f} error')
         else:
             st.warning(f'{label}: {value}')
+        guidance = guidance_markdown(label)
+        if guidance:
+            with st.expander(f'Apa arti {label} dan mengapa muncul?'):
+                st.markdown(guidance)
         rows = details.get(label, [])
         if not rows and not errors.empty and 'rule_dilanggar' in errors:
             rows = errors[errors['rule_dilanggar'].eq(label)].to_dict('records')
