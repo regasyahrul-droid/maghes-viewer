@@ -230,14 +230,14 @@ def render_footer(page="home"):
 
 
 def render_card(title, score):
-    if score is None: score = 0
-    color = "var(--success)" if score >= 95 else "var(--warning)" if score >= 75 else "var(--danger)"
-    display_score = "99.9" if 99.9 < score < 100 else f"{score:.1f}"
+    unavailable = score is None or pd.isna(score)
+    color = "var(--text-secondary)" if unavailable else ("var(--success)" if score >= 95 else "var(--warning)" if score >= 75 else "var(--danger)")
+    display_score = "Belum tersedia" if unavailable else ("99.9%" if 99.9 < score < 100 else f"{score:.1f}%")
     return f"""
     <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 14px;
         padding: 1.2rem; text-align: center; border-top: 3px solid {color};">
         <p style="margin:0; font-size:0.85rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.5px;">{title}</p>
-        <h1 style="color:{color}; font-size:2.5rem; margin:10px 0; font-family:'JetBrains Mono',monospace; font-weight:800;">{display_score}%</h1>
+        <h1 style="color:{color}; font-size:2.5rem; margin:10px 0; font-family:'JetBrains Mono',monospace; font-weight:800;">{display_score}</h1>
     </div>
     """
 
@@ -512,6 +512,17 @@ else:
     
     st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{record['total_record']}** | Terakhir Publish: **{record['published_at']}**")
 
+    import json
+    try:
+        publication_recap = json.loads(record.get("hasil_rekapitulasi") or "{}")
+    except (TypeError, ValueError):
+        publication_recap = {}
+    incomplete_checks = publication_recap.get("_qa_checks", [])
+    if incomplete_checks:
+        st.warning("Verifikasi selesai dengan catatan. Sebagian pemeriksaan belum dapat dijalankan; skor terkait belum tersedia. Admin tetap dapat melihat temuan dan memperbaiki data.")
+        with st.expander("Lihat pemeriksaan yang belum tersedia", expanded=True):
+            st.dataframe(pd.DataFrame(incomplete_checks), use_container_width=True, hide_index=True)
+
     # ── Tabs ──
     tab_rekap, tab_struktur, tab_atribut, tab_spasial, tab_error = st.tabs([
         "📈 Rekapitulasi Aset", 
@@ -529,7 +540,7 @@ else:
                 import json
                 rekap_data = json.loads(record['hasil_rekapitulasi'])
                 
-                keys = list(rekap_data.keys())
+                keys = [key for key in rekap_data if key != "_qa_checks"]
                 if len(keys) == 1:
                     k = keys[0]
                     st.markdown(f"#### 📊 Berdasarkan {k}")
