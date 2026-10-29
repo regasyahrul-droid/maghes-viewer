@@ -148,36 +148,47 @@ def _mail_config():
         return None
 
 
-def notify_reviewer(engine, request_id, schema, table, username, rows, notes):
+def notify_reviewer_batch(engine, requests, schema, username, notes):
+    """Satu email untuk seluruh layer dalam satu pengajuan bulanan."""
     config = _mail_config()
-    if not config:
+    if not config or not requests:
         return False
     sender, app_password, reviewer = config
+    periods = sorted({table_month(table) for _, table in requests if table_month(table)})
+    period_text = ", ".join(month_label(period) for period in periods) or "Tanpa bulan"
+    up3 = schema.rsplit("_", 1)[0].replace("_", " ").title()
+    layers = "\n".join(f"{index}. {table}" for index, (_, table) in enumerate(requests, 1))
     msg = EmailMessage()
     msg["From"] = sender
     msg["To"] = reviewer
-    msg["Subject"] = f"[MAGHES] Pengajuan verifikasi {schema}.{table}"
-    rows_line = f"Perkiraan record: {rows}\n" if rows is not None else ""
+    msg["Subject"] = f"[MAGHES] Pengajuan Verifikasi UP3 {up3} — {period_text}"
     msg.set_content(
-        f"Pengajuan: {request_id}\nUP3: {schema}\nTabel: {table}\n"
-        f"Pengaju: {username}\n{rows_line}"
+        f"UP3: {up3} ({schema})\nBulan Validasi: {period_text}\n"
+        f"Pengaju: {username}\nJumlah layer: {len(requests)}\n\n"
+        f"Layer yang perlu diverifikasi:\n{layers}\n\n"
         f"Catatan: {notes[:500] or '-'}\n\n"
-        "Buka antrean MAGHES internal untuk memeriksa data."
+        "Buka menu Pengajuan Verifikasi di MAGHES intranet untuk memeriksa layer tersebut."
     )
     try:
         with smtplib.SMTP("smtp.gmail.com", 587, timeout=20) as server:
             server.starttls()
             server.login(sender, app_password)
             server.send_message(msg)
+        statement = text("""
+            UPDATE public.maghes_verification_requests
+               SET request_notified_at = now()
+             WHERE id IN :ids AND requested_by = :username AND request_notified_at IS NULL
+        """).bindparams(bindparam("ids", expanding=True))
         with engine.begin() as conn:
-            conn.execute(text("""
-                UPDATE public.maghes_verification_requests
-                   SET request_notified_at = now()
-                 WHERE id = :id AND requested_by = :username AND request_notified_at IS NULL
-            """), {"id": request_id, "username": username})
+            conn.execute(statement, {"ids": [request_id for request_id, _ in requests],
+                                     "username": username})
         return True
     except (OSError, smtplib.SMTPException):
         return False
+
+
+def notify_reviewer(engine, request_id, schema, table, username, rows, notes):
+    return notify_reviewer_batch(engine, [(request_id, table)], schema, username, notes)
 
 
 def render_submission_portal(engine, username, role, schema, account):
@@ -234,20 +245,12 @@ def render_submission_portal(engine, username, role, schema, account):
             requests = submit_requests(
                 engine, username, account, selected_schema, tables, notes
             )
-            sent = 0
-            for request_id, table in requests:
-                if notify_reviewer(
-                    engine, request_id, selected_schema, table,
-                    username, None, notes
-                ):
-                    sent += 1
-            message = f"{len(requests)} pengajuan tersimpan dan masuk antrean UID."
-            if sent == len(requests):
-                message += " Semua email pemberitahuan terkirim."
-            elif sent:
-                message += f" Email terkirim: {sent} dari {len(requests)}."
-            else:
-                message += " Email belum terkirim; pengajuan tetap terlihat di antrean UID."
+            mailed = notify_reviewer_batch(
+                engine, requests, selected_schema, username, notes
+            )
+            message = f"Pengajuan {month_label(period)} dengan {len(requests)} layer tersimpan."
+            message += (" Satu email ringkasan terkirim ke verifikator." if mailed else
+                        " Email belum terkirim; pengajuan tetap masuk antrean UID.")
             st.success(message)
         except ValueError as exc:
             st.error(str(exc))
@@ -271,13 +274,13 @@ def render_submission_portal(engine, username, role, schema, account):
                 ]
                 if not pending.empty and st.button("Kirim ulang email pengajuan yang tertunda"):
                     sent = 0
-                    for _, item in pending.iterrows():
-                        if notify_reviewer(
-                            engine, str(item["id"]), item["schema_name"],
-                            item["table_name"], username, None, ""
-                        ):
+                    grouped = pending.copy()
+                    grouped["period"] = grouped["table_name"].map(table_month).fillna("Tanpa bulan")
+                    for (pending_schema, pending_period), group in grouped.groupby(["schema_name", "period"]):
+                        requests = [(str(item["id"]), item["table_name"]) for _, item in group.iterrows()]
+                        if notify_reviewer_batch(engine, requests, pending_schema, username, ""):
                             sent += 1
-                    st.info(f"Email terkirim: {sent} dari {len(pending)} pengajuan.")
+                    st.info(f"Email ringkasan terkirim: {sent}.")
     except Exception:
         st.info(
             "Riwayat pengajuan belum tersedia; "
