@@ -1,5 +1,7 @@
 """UP3 submission form and status list for the internet-facing viewer."""
 import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from uuid import uuid4
 import smtplib
 from email.message import EmailMessage
@@ -12,6 +14,19 @@ SCHEMA_RE = re.compile(r"^[a-z]+_[0-9]{4}$")
 TABLE_RE = re.compile(r"^(?:20\d{4}|20\d{6})_ADD_[A-Za-z0-9_]+$", re.I)
 PERIOD_RE = re.compile(r"^20\d{2}(?:0[1-9]|1[0-2])$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+MONTH_NAMES = (
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+)
+
+
+def month_label(period):
+    value = str(period)
+    if not PERIOD_RE.fullmatch(value):
+        return value
+    return f"{MONTH_NAMES[int(value[4:6]) - 1]} {value[:4]}"
+
 
 MONTH_RE = re.compile(r"^(20\d{2})(0[1-9]|1[0-2])(?:\d{2})?_")
 
@@ -181,12 +196,21 @@ def render_submission_portal(engine, username, role, schema, account):
 
     with st.form("maghes_request_form", clear_on_submit=True):
         selected_schema = st.selectbox("1. UP3", allowed)
-        period = st.text_input(
-            "2. Data Bulan Apa",
-            placeholder="Contoh: 202610",
-            max_chars=6,
-            help="Gunakan enam angka: tahun dan bulan (YYYYMM).",
-        )
+        st.markdown("**2. Bulan Validasi**")
+        today = datetime.now(ZoneInfo("Asia/Jakarta"))
+        month_column, year_column = st.columns(2)
+        with month_column:
+            validation_month = st.selectbox(
+                "Bulan", list(range(1, 13)), index=today.month - 1,
+                format_func=lambda month: MONTH_NAMES[month - 1],
+                key="submission_validation_month",
+            )
+        with year_column:
+            validation_year = st.selectbox(
+                "Tahun", list(range(today.year + 1, 1999, -1)), index=1,
+                key="submission_validation_year",
+            )
+        period = f"{validation_year:04d}{validation_month:02d}"
         st.markdown("**3. Tabel yang selesai diunggah melalui QGIS**")
         st.caption("Centang satu atau beberapa jenis aset.")
         columns = st.columns(3)
