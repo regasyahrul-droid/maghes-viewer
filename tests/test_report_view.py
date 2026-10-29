@@ -23,7 +23,8 @@ def fixture():
                        'rule_dilanggar': 'Gardu Tanpa Tiang', 'detail_anomali': 'No pole', 'status_revisi': 'CLOSED'}],
         'error_geojson': {'type': 'FeatureCollection', 'features': [{
             'type': 'Feature', 'geometry': {'type': 'Point', 'coordinates': [110, -7]},
-            'properties': {'objectid': 7, 'rule': 'DATE', 'detail': 'Missing date'}}]},
+            'properties': {'objectid': 7, 'rule': 'DATE', 'detail': 'Missing date',
+                           'jenis_error': 'ATRIBUT', 'status_revisi': 'OPEN'}}]},
     }
     record = {'id': 99, 'tabel_sumber': '202610_ADD_GARDU', 'total_record': 2,
               'layer_type': 'gardu_distribusi', 'score_attr': None, 'score_spas': 75,
