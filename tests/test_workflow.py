@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 from viewer_auth import authenticate
 from viewer_submissions import (
     ASSET_TYPES,
+    table_month,
     assigned_schemas,
     build_table_name,
     submit_request,
@@ -40,6 +41,13 @@ class WorkflowTests(unittest.TestCase):
         accounts = {"up3": {"password_hash": encoded,
                             "schema": "cilacap_5221", "role": "viewer"}}
         self.assertIsNotNone(authenticate(accounts, "up3", "example-only"))
+
+    def test_result_month_uses_data_period_not_publish_date(self):
+        self.assertEqual(table_month("202610_ADD_APP"), "202610")
+        self.assertEqual(table_month("20261023_ADD_TIANG_SEMARANG"), "202610")
+        self.assertEqual(table_month("202609_ADD_APP"), "202609")
+        self.assertIsNone(table_month("MASTER_APP"))
+        self.assertIsNone(table_month("202613_ADD_APP"))
 
     def test_submission_scope(self):
         self.assertEqual(assigned_schemas("viewer", "semarang_5217,cilacap_5221"),
