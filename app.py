@@ -415,16 +415,16 @@ else:
             # Load list of published verifications
             try:
                 if current_role == "admin":
-                    df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
+                    df_verif = pd.read_sql("SELECT DISTINCT ON (schema_name, tabel_sumber) id,schema_name,tabel_sumber,layer_type,published_at FROM public.tbl_published_verifications WHERE is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC", engine)
                 else:
                     schemas_list = [s.strip() for s in user_schema.split(',')]
                     if len(schemas_list) > 1:
                         conditions = " OR ".join([f"schema_name = :schema_{i}" for i in range(len(schemas_list))])
                         params = {f"schema_{i}": s for i, s in enumerate(schemas_list)}
-                        q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE is_complete = true AND ({conditions}) ORDER BY schema_name, tabel_sumber, published_at DESC")
+                        q = text(f"SELECT DISTINCT ON (schema_name, tabel_sumber) id,schema_name,tabel_sumber,layer_type,published_at FROM public.tbl_published_verifications WHERE is_complete = true AND ({conditions}) ORDER BY schema_name, tabel_sumber, published_at DESC")
                         df_verif = pd.read_sql(q, engine, params=params)
                     else:
-                        df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) * FROM public.tbl_published_verifications WHERE schema_name = :schema AND is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": user_schema})
+                        df_verif = pd.read_sql(text("SELECT DISTINCT ON (schema_name, tabel_sumber) id,schema_name,tabel_sumber,layer_type,published_at FROM public.tbl_published_verifications WHERE schema_name = :schema AND is_complete = true ORDER BY schema_name, tabel_sumber, published_at DESC"), engine, params={"schema": user_schema})
                 # Sort again by published_at DESC for display
                 df_verif = df_verif.sort_values(by="published_at", ascending=False).reset_index(drop=True)
             except Exception:
@@ -505,153 +505,38 @@ else:
         st.stop()
 
     # ── Get Record ──
-    record = df_verif[df_verif['id'] == selected_verif_id].iloc[0]
+    selected_schema = df_verif[df_verif["id"] == selected_verif_id].iloc[0]["schema_name"]
+    try:
+        selected_report = pd.read_sql(text(
+            "SELECT * FROM public.tbl_published_verifications WHERE id=:id AND schema_name=:schema AND is_complete=true"
+        ), engine, params={"id": selected_verif_id, "schema": selected_schema})
+    except Exception:
+        st.error("Laporan belum dapat dibaca. Coba muat ulang.")
+        st.stop()
+    if selected_report.empty:
+        st.warning("Laporan tidak tersedia. Pilih kembali dari daftar hasil.")
+        st.stop()
+    record = selected_report.iloc[0]
 
     st.success("✅ Verifikasi berhasil dijalankan! Hasil telah disimpan ke database log.")
     st.markdown(f"**Target:** `{record['schema_name']}.{record['tabel_sumber']}` | **Tipe:** **{record['layer_type'].upper()}**")
     
     st.info(f"📊 **Rekapitulasi Layer:** Total Record diverifikasi: **{record['total_record']}** | Terakhir Publish: **{record['published_at']}**")
 
+    from viewer_report import render_report
+    legacy_errors = None
+    recap_raw = record.get("hasil_rekapitulasi")
     import json
     try:
-        publication_recap = json.loads(record.get("hasil_rekapitulasi") or "{}")
+        has_snapshot = "_qa_report" in json.loads(recap_raw or "{}")
     except (TypeError, ValueError):
-        publication_recap = {}
-    incomplete_checks = publication_recap.get("_qa_checks", [])
-    if incomplete_checks:
-        st.warning("Verifikasi selesai dengan catatan. Sebagian pemeriksaan belum dapat dijalankan; skor terkait belum tersedia. Admin tetap dapat melihat temuan dan memperbaiki data.")
-        with st.expander("Lihat pemeriksaan yang belum tersedia", expanded=True):
-            st.dataframe(pd.DataFrame(incomplete_checks), use_container_width=True, hide_index=True)
-
-    # ── Tabs ──
-    tab_rekap, tab_struktur, tab_atribut, tab_spasial, tab_error = st.tabs([
-        "📈 Rekapitulasi Aset", 
-        "📐 Struktur Kolom", 
-        "📊 Kualitas Atribut", 
-        "🌐 Spasial & Duplikat", 
-        "📋 Error Log Terpadu"
-    ])
-
-    with tab_rekap:
-        if pd.isna(record.get('hasil_rekapitulasi')) or not record['hasil_rekapitulasi']:
-            st.info("🔒 **Fitur Terkunci / Data Kosong:** Detail rekapitulasi aset belum disinkronisasi ke web publik. Silakan lakukan verifikasi ulang di aplikasi utama.")
-        else:
-            try:
-                import json
-                rekap_data = json.loads(record['hasil_rekapitulasi'])
-                
-                keys = [key for key in rekap_data if key != "_qa_checks"]
-                if len(keys) == 1:
-                    k = keys[0]
-                    st.markdown(f"#### 📊 Berdasarkan {k}")
-                    df_k = pd.DataFrame(rekap_data[k])
-                    if not df_k.empty:
-                        first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
-                        if first_num_col:
-                            st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
-                        st.dataframe(df_k, use_container_width=True, hide_index=True)
-                elif len(keys) >= 2:
-                    col1, col2 = st.columns(2)
-                    for idx, k in enumerate(keys[:2]):
-                        target_col = col1 if idx == 0 else col2
-                        with target_col:
-                            st.markdown(f"#### 📊 Berdasarkan {k}")
-                            df_k = pd.DataFrame(rekap_data[k])
-                            if not df_k.empty:
-                                first_num_col = next((c for c in df_k.columns if c != df_k.columns[0]), None)
-                                if first_num_col:
-                                    st.bar_chart(df_k.set_index(df_k.columns[0])[first_num_col])
-                                st.dataframe(df_k, use_container_width=True, hide_index=True)
-            except Exception as e:
-                st.error(f"Gagal memuat rekapitulasi: {e}")
-    
-    with tab_struktur:
-        st.markdown("### 📐 Perbandingan Struktur")
-        if pd.isna(record.get('hasil_struktur')) or not record['hasil_struktur']:
-            st.warning("Data struktur kolom tidak tersedia. Harap lakukan verifikasi ulang di aplikasi utama agar data sinkron ke Supabase.")
-        else:
-            try:
-                import json
-                struk_data = json.loads(record['hasil_struktur'])
-                df_cols = pd.DataFrame(struk_data)
-                
-                issues = df_cols[df_cols["status"] != "OK"] if "status" in df_cols.columns else pd.DataFrame()
-                ok_count = len(df_cols) - len(issues)
-                
-                st.markdown(f"""
-                <div style="display:flex; gap:10px; margin-bottom:15px;">
-                    <div class="stat-box"><div class="s-num blue">{len(df_cols)}</div><div class="s-txt">Total Kolom</div></div>
-                    <div class="stat-box"><div class="s-num green">{ok_count}</div><div class="s-txt">✅ Match</div></div>
-                    <div class="stat-box"><div class="s-num red">{len(issues)}</div><div class="s-txt">❌ Bermasalah</div></div>
-                </div>""", unsafe_allow_html=True)
-                
-                if not issues.empty:
-                    st.error(f"Ditemukan **{len(issues)}** kolom bermasalah:")
-                    st.dataframe(issues, use_container_width=True, hide_index=True)
-                
-                with st.expander("🔍 Lihat Seluruh Kolom"):
-                    st.dataframe(df_cols, use_container_width=True, hide_index=True)
-            except Exception as e:
-                st.error(f"Gagal memuat data struktur: {str(e)}")
-
-    # ── Scorecards ──
-    with tab_atribut:
-        st.markdown(render_card("Validitas Atribut", record['score_attr']), unsafe_allow_html=True)
-        st.markdown("---")
+        has_snapshot = False
+    if not has_snapshot:
         try:
-            df_attr = pd.read_sql(text("SELECT * FROM public.tbl_qa_error_log_public WHERE verification_id = :vid AND jenis_error = 'ATRIBUT'"), engine, params={"vid": selected_verif_id})
-        except:
-            df_attr = pd.DataFrame()
-
-        if df_attr.empty:
-            st.success("🎉 Tidak ada error atribut. Data 100% valid!")
-        else:
-            st.warning(f"Ditemukan **{len(df_attr)}** error atribut.")
-            summary = df_attr['rule_dilanggar'].value_counts()
-            for rule, count in summary.items():
-                with st.expander(f"❌ {rule} — {count} error"):
-                    st.dataframe(df_attr[df_attr['rule_dilanggar'] == rule][['objectid', 'rule_dilanggar', 'detail_error']], use_container_width=True, hide_index=True)
-
-    with tab_spasial:
-        st.markdown(render_card("Validitas Spasial", record['score_spas']), unsafe_allow_html=True)
-        st.markdown("---")
-        try:
-            df_spas = pd.read_sql(text("SELECT * FROM public.tbl_qa_error_log_public WHERE verification_id = :vid AND jenis_error != 'ATRIBUT'"), engine, params={"vid": selected_verif_id})
-        except:
-            df_spas = pd.DataFrame()
-
-        if df_spas.empty:
-            st.success("🎉 Tidak ada error spasial. Data 100% valid!")
-        else:
-            st.warning(f"Ditemukan **{len(df_spas)}** error spasial.")
-            summary = df_spas['rule_dilanggar'].value_counts()
-            for rule, count in summary.items():
-                with st.expander(f"❌ {rule} — {count} error"):
-                    st.dataframe(df_spas[df_spas['rule_dilanggar'] == rule][['objectid', 'rule_dilanggar', 'detail_error']], use_container_width=True, hide_index=True)
-
-    with tab_error:
-        st.markdown(render_card("Kesehatan Data Keseluruhan", record['score_overall']), unsafe_allow_html=True)
-        st.markdown("---")
-        st.markdown("### 📋 Unified Error Log")
-        try:
-            df_all = pd.read_sql(text("SELECT * FROM public.tbl_qa_error_log_public WHERE verification_id = :vid"), engine, params={"vid": selected_verif_id})
-        except:
-            df_all = pd.DataFrame()
-
-        if df_all.empty:
-            st.success("🎉 Tidak ada error QA/QC yang terekam. Data bersih!")
-        else:
-            st.warning(f"Ditemukan **{len(df_all)}** total log error.")
-            st.dataframe(df_all[['objectid', 'jenis_error', 'rule_dilanggar', 'detail_error']], use_container_width=True, hide_index=True)
-
-            # Download CSV
-            csv_data = df_all.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download CSV (Excel)",
-                data=csv_data,
-                file_name=f"error_log_{record['tabel_sumber']}.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
-
+            legacy_errors = pd.read_sql(text(
+                "SELECT * FROM public.tbl_qa_error_log_public WHERE verification_id=:vid"
+            ), engine, params={"vid": selected_verif_id})
+        except Exception:
+            st.error("Rincian log belum dapat dibaca. Coba muat ulang laporan.")
+    render_report(record, render_card, legacy_errors)
     render_footer("validator")
