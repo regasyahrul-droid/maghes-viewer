@@ -13,6 +13,15 @@ TABLE_RE = re.compile(r"^(?:20\d{4}|20\d{6})_ADD_[A-Za-z0-9_]+$", re.I)
 PERIOD_RE = re.compile(r"^20\d{2}(?:0[1-9]|1[0-2])$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+MONTH_RE = re.compile(r"^(20\d{2})(0[1-9]|1[0-2])(?:\d{2})?_")
+
+
+def table_month(table_name):
+    """Kelompokkan tabel YYYYMM dan YYYYMMDD pada bulan data yang sama."""
+    match = MONTH_RE.match(str(table_name).upper())
+    return f"{match.group(1)}{match.group(2)}" if match else None
+
+
 ASSET_TYPES = (
     "APP",
     "ARRESTER",
