@@ -28,6 +28,15 @@ def rule_guidance(label):
 
 
 def guidance_markdown(label):
+    additional = {
+        'DAYA_KONTRAK_FORMAT_VA': 'Daya kontrak APP harus berupa angka VA positif, misalnya `1300`, `1.300`, atau `1300 VA`. Daya saja tidak menentukan fasa atau jenis sambungan.',
+        'FASA_SUBCLASS_PELANGGAN': 'Periksa `subclass` pelanggan dan atribut `fasa`: TR 1 FASA cocok dengan 1/R/S/T, TR 3 FASA dengan 3/RST. Daya ambigu seperti 7.700 VA tidak digunakan untuk menebak fasa.',
+        'FASA_POSISI_TIDAK_KONSISTEN': 'Jumlah fasa dan posisi fasa harus serasi: 1 fasa R/S/T, 2 fasa RS/RT/ST, 3 fasa RST. Periksa kedua atribut dan kondisi jaringan di lapangan.',
+        'SINCAL Segmen Mikro JTM (< 3m)': 'Segmen JTM lebih pendek dari 3 m menurut geometri. Periksa apakah split ini memang diperlukan; ambang ini khusus kesiapan model SINCAL.',
+        'SINCAL Trafo Belum Snap ke JTM (0.5m)': 'Trafo lebih dari 0,5 m dari semua JTM pendukung terpilih. Periksa CRS, posisi titik, ruas penyulang yang tepat, dan kelengkapan layer. Kedekatan spasial tidak membuktikan hubungan listrik aktual.',
+    }
+    if label in additional:
+        return additional[label]
     guidance = rule_guidance(label)
     if not guidance:
         return None
