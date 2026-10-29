@@ -4,7 +4,13 @@ import unittest
 from unittest.mock import MagicMock
 
 from viewer_auth import authenticate
-from viewer_submissions import assigned_schemas, submit_request
+from viewer_submissions import (
+    ASSET_TYPES,
+    assigned_schemas,
+    build_table_name,
+    submit_request,
+    submit_requests,
+)
 
 
 class WorkflowTests(unittest.TestCase):
@@ -39,6 +45,15 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(assigned_schemas("viewer", "semarang_5217,cilacap_5221"),
                          ["semarang_5217"])
 
+    def test_table_name_is_built_from_month_and_allowed_asset(self):
+        self.assertEqual(build_table_name("202610", "gardu_distribusi"),
+                         "202610_ADD_GARDU_DISTRIBUSI")
+        self.assertIn("STLTR", ASSET_TYPES)
+        with self.assertRaises(ValueError):
+            build_table_name("202613", "APP")
+        with self.assertRaises(ValueError):
+            build_table_name("202610", "TABEL_BEBAS")
+
     def test_rejects_another_up3_before_database_write(self):
         engine = MagicMock()
         account = {"schema": "semarang_5217", "role": "viewer", "email": "example@example.com"}
@@ -54,7 +69,29 @@ class WorkflowTests(unittest.TestCase):
         request_id = submit_request(engine, "up3", account, "semarang_5217",
                                     "202610_ADD_APP", 42, "")
         self.assertEqual(len(request_id), 36)
-        self.assertEqual(engine.begin.return_value.__enter__.return_value.execute.call_args.args[1]["id"], request_id)
+        self.assertEqual(
+            engine.begin.return_value.__enter__.return_value.execute.call_args.args[1]["table"],
+            "202610_ADD_APP",
+        )
+
+    def test_multiple_asset_requests_share_one_transaction(self):
+        engine = MagicMock()
+        connection = engine.begin.return_value.__enter__.return_value
+        first, second = MagicMock(), MagicMock()
+        first.scalar_one_or_none.return_value = "first"
+        second.scalar_one_or_none.return_value = "second"
+        connection.execute.side_effect = [first, second]
+        account = {"schema": "semarang_5217", "role": "viewer", "email": "example@example.com"}
+
+        requests = submit_requests(
+            engine, "up3", account, "semarang_5217",
+            ["202610_ADD_APP", "202610_ADD_TRAFO"], "unggahan lengkap"
+        )
+
+        self.assertEqual(len(requests), 2)
+        self.assertEqual(engine.begin.call_count, 1)
+        submitted_tables = [call.args[1]["table"] for call in connection.execute.call_args_list]
+        self.assertEqual(submitted_tables, ["202610_ADD_APP", "202610_ADD_TRAFO"])
 
 
 if __name__ == "__main__":
