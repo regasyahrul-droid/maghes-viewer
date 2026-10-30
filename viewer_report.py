@@ -1,6 +1,8 @@
 """Laporan QA/QC publik dari snapshot intranet, tanpa menjalankan verifikasi."""
 import json
 import numbers
+import base64
+import zlib
 
 import pandas as pd
 import streamlit as st
@@ -20,6 +22,23 @@ def unpack(value, default=None):
         except ValueError:
             pass
     return {} if default is None else default
+
+
+def report_snapshot(recap):
+    if isinstance(recap.get('_qa_report'), dict):
+        return recap['_qa_report']
+    encoded = recap.get('_qa_report_zlib')
+    if not encoded:
+        return {}
+    try:
+        compressed = base64.b64decode(encoded, validate=True)
+        decoder = zlib.decompressobj()
+        raw = decoder.decompress(compressed, 150_000_001)
+        if not decoder.eof or len(raw) > 150_000_000:
+            raise ValueError('Snapshot laporan terlalu besar atau tidak lengkap.')
+        return json.loads(raw)
+    except (ValueError, zlib.error, TypeError):
+        return {}
 
 
 def duplicate_group(label):
@@ -116,7 +135,7 @@ def render_report(record, render_card, legacy_errors=None):
     table = record['tabel_sumber']
     key = str(record['id'])
     recap = unpack(record.get('hasil_rekapitulasi'))
-    snapshot = recap.get('_qa_report', {})
+    snapshot = report_snapshot(recap)
     errors = pd.DataFrame(snapshot.get('error_log', [])) if snapshot else (
         legacy_errors.copy() if legacy_errors is not None else pd.DataFrame())
     if 'detail_error' in errors and 'detail_anomali' not in errors:
@@ -229,4 +248,5 @@ def render_report(record, render_card, legacy_errors=None):
                 st.write(f'Pendukung {kind}')
                 for source in sources:
                     st.write(f"{source['schema']}.{source['table']}")
+
 

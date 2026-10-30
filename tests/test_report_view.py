@@ -1,8 +1,10 @@
 import json
+import base64
+import zlib
 import unittest
 
 from streamlit.testing.v1 import AppTest
-from viewer_report import unpack, duplicate_rules
+from viewer_report import unpack, duplicate_rules, report_snapshot
 from rule_guidance import guidance_markdown
 
 
@@ -36,6 +38,11 @@ def fixture():
 
 
 class PublicReportViewTests(unittest.TestCase):
+    def test_compressed_snapshot_keeps_all_report_details(self):
+        original = unpack(fixture()['hasil_rekapitulasi'])['_qa_report']
+        encoded = base64.b64encode(zlib.compress(json.dumps(original).encode())).decode()
+        self.assertEqual(report_snapshot({'_qa_report_zlib': encoded}), original)
+
     def test_all_tabs_render_partial_report_and_duplicate_filter(self):
         app = AppTest.from_string('''
 import streamlit as st
@@ -79,4 +86,5 @@ render_rules({'Tiang vs JTM Conductor Mismatch': 86}, {}, 'spatial', 'TIANG', pd
 
 if __name__ == '__main__':
     unittest.main()
+
 

@@ -528,7 +528,8 @@ else:
     recap_raw = record.get("hasil_rekapitulasi")
     import json
     try:
-        has_snapshot = "_qa_report" in json.loads(recap_raw or "{}")
+        recap = json.loads(recap_raw or "{}")
+        has_snapshot = "_qa_report" in recap or "_qa_report_zlib" in recap
     except (TypeError, ValueError):
         has_snapshot = False
     if not has_snapshot:
@@ -540,3 +541,4 @@ else:
             st.error("Rincian log belum dapat dibaca. Coba muat ulang laporan.")
     render_report(record, render_card, legacy_errors)
     render_footer("validator")
+
