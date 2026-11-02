@@ -131,10 +131,18 @@ def list_requests(engine, username, account):
     if not allowed:
         return pd.DataFrame()
     stmt = text("""
+        WITH ranked AS (
+            SELECT id, schema_name, table_name, requested_by, expected_rows, status,
+                   requested_at, updated_at, published_id, request_notified_at, result_notified_at,
+                   ROW_NUMBER() OVER (PARTITION BY schema_name, table_name
+                                      ORDER BY requested_at, id) AS submission_round
+              FROM public.maghes_verification_requests
+             WHERE schema_name IN :schemas
+        )
         SELECT id, schema_name, table_name, expected_rows, status,
-               requested_at, updated_at, published_id, request_notified_at, result_notified_at
-          FROM public.maghes_verification_requests
-         WHERE requested_by = :username AND schema_name IN :schemas
+               requested_at, updated_at, published_id, request_notified_at, result_notified_at,
+               submission_round
+          FROM ranked WHERE requested_by = :username
          ORDER BY requested_at DESC LIMIT 30
     """).bindparams(bindparam("schemas", expanding=True))
     return pd.read_sql(stmt, engine, params={"username": username, "schemas": allowed})
@@ -224,6 +232,7 @@ def render_submission_portal(engine, username, role, schema, account):
         period = f"{validation_year:04d}{validation_month:02d}"
         st.markdown("**3. Tabel yang selesai diunggah melalui QGIS**")
         st.caption("Centang satu atau beberapa jenis aset.")
+        st.caption("Tabel yang pernah diajukan dapat diajukan lagi sebagai revisi setelah hasil sebelumnya tersedia. Jumlah record boleh bertambah atau berkurang; jelaskan perubahannya pada catatan.")
         columns = st.columns(3)
         selected_assets = []
         for index, asset_type in enumerate(ASSET_TYPES):
@@ -261,8 +270,10 @@ def render_submission_portal(engine, username, role, schema, account):
         history = list_requests(engine, username, account)
         if not history.empty:
             st.markdown("#### Status pengajuan saya")
+            history["tahap"] = history["submission_round"].map(
+                lambda number: "Awal" if int(number) == 1 else f"Revisi ke-{int(number) - 1}")
             st.dataframe(
-                history[["schema_name", "table_name", "status",
+                history[["schema_name", "table_name", "tahap", "status",
                          "requested_at", "updated_at"]],
                 use_container_width=True,
                 hide_index=True,
@@ -286,3 +297,4 @@ def render_submission_portal(engine, username, role, schema, account):
             "Riwayat pengajuan belum tersedia; "
             "minta pengelola menjalankan migrasi tabel pengajuan."
         )
+
