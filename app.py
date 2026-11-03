@@ -443,6 +443,19 @@ else:
                 month_value = None if selected_month == "Tanpa bulan" else selected_month
                 df_verif = df_verif[df_verif["bulan_data"].isna() if month_value is None
                                     else df_verif["bulan_data"].eq(month_value)].copy()
+
+                # Auto-filter: Jika sudah ada tabel resmi bulanan (YYYYMM_ADD_...), otomatis sembunyikan tabel tanggal draft (YYYYMMDD_ADD_...)
+                if not df_verif.empty and "tabel_sumber" in df_verif.columns and "layer_type" in df_verif.columns:
+                    dated_mask = df_verif["tabel_sumber"].astype(str).str.match(r"^20\d{6}_")
+                    clean_groups = set(
+                        zip(
+                            df_verif[~dated_mask]["schema_name"],
+                            df_verif[~dated_mask]["bulan_data"],
+                            df_verif[~dated_mask]["layer_type"]
+                        )
+                    )
+                    mask_keep = ~dated_mask | ~df_verif.set_index(["schema_name", "bulan_data", "layer_type"]).index.isin(clean_groups)
+                    df_verif = df_verif[mask_keep.values].copy()
                 st.markdown("##### 📋 Pilih Hasil Verifikasi")
                 options = df_verif["id"].tolist()
                 format_map = {
