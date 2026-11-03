@@ -107,6 +107,8 @@ def render_duplicates(snapshot, table, layer_type):
     for group, title in [('geometry', 'Duplikasi Geometri'),
                          ('identity', 'Duplikasi ID Pelanggan' if layer_type in ('pelanggan_app', 'app', 'pelanggan') else 'Duplikasi Identitas Aset')]:
         rules = duplicate_rules(snapshot, group)
+        if group == 'identity' and any('MAS8' in label.upper() for label in rules):
+            title += ' / Deskripsi MAS8'
         if not rules:
             st.info(f'{title}: hasil pemeriksaan belum tersedia.')
             continue
@@ -115,6 +117,10 @@ def render_duplicates(snapshot, table, layer_type):
             st.success(f'{title}: 0 temuan')
             continue
         st.error(f'{title}: {total:,.0f} temuan')
+        if group == 'identity':
+            st.caption('Per aturan: ' + ' · '.join(
+                f'{label}: {count:,.0f}' for label, (count, _) in rules.items()
+                if numeric(count) and count > 0))
         with st.expander(f'Lihat detail / Download — {title}'):
             st.caption('Temuan aturan dapat tumpang tindih. Rincian maksimal 500 record per aturan, sama seperti rapor intranet. Pasangan duplikat diperiksa pada data saat snapshot dikirim; maksimal 10 ID pasangan per sumber.')
             note = snapshot.get('duplicate_notes', {}).get(group)
