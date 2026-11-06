@@ -37,6 +37,33 @@ BG_VALIDATOR_B64 = load_b64(BG_VALIDATOR_PATH)
 from viewer_auth import load_accounts, authenticate
 from viewer_submissions import render_submission_portal, table_month, month_label
 
+UP3_NAMES = {
+    "cilacap_5221": "Cilacap (5221)",
+    "grobogan_5222": "Grobogan (5222)",
+    "klaten_5219": "Klaten (5219)",
+    "kudus_5211": "Kudus (5211)",
+    "magelang_5214": "Magelang (5214)",
+    "pekalongan_5220": "Pekalongan (5220)",
+    "purwokerto_5215": "Purwokerto (5215)",
+    "salatiga_5218": "Salatiga (5218)",
+    "semarang_5217": "Semarang (5217)",
+    "sukoharjo_5223": "Sukoharjo (5223)",
+    "surakarta_5212": "Surakarta (5212)",
+    "tegal_5216": "Tegal (5216)",
+    "up2d_5226": "UP2D (5226)",
+    "master_jateng": "Master Jateng",
+}
+
+def up3_label(schema):
+    if schema in ("all", "Semua UP3", "(Semua UP3)"):
+        return "🌐 Semua UP3"
+    if schema in UP3_NAMES:
+        return f"🏢 {UP3_NAMES[schema]}"
+    parts = str(schema).split('_')
+    if len(parts) == 2 and parts[1].isdigit():
+        return f"🏢 {parts[0].title()} ({parts[1]})"
+    return f"🏢 {str(schema)}"
+
 USERS_DB = load_accounts()
 
 # ==========================================
@@ -433,40 +460,61 @@ else:
             if df_verif.empty:
                 st.warning("Belum ada hasil verifikasi yang tersedia.")
             else:
+                available_schemas = sorted(df_verif["schema_name"].dropna().unique().tolist())
+                selected_up3 = "Semua UP3"
+                if current_role == "admin" or len(available_schemas) > 1:
+                    up3_options = ["Semua UP3"] + available_schemas
+                    selected_up3 = st.selectbox(
+                        "Pilih UP3", up3_options, format_func=up3_label, key="maghes_result_up3"
+                    )
+                    if selected_up3 != "Semua UP3":
+                        df_verif = df_verif[df_verif["schema_name"] == selected_up3].copy()
+
                 df_verif["bulan_data"] = df_verif["tabel_sumber"].map(table_month)
                 months = sorted(df_verif["bulan_data"].dropna().unique(), reverse=True)
                 if df_verif["bulan_data"].isna().any():
                     months.append("Tanpa bulan")
-                selected_month = st.selectbox(
-                    "Bulan Validasi", months, format_func=month_label, key="maghes_result_month"
-                )
-                month_value = None if selected_month == "Tanpa bulan" else selected_month
-                df_verif = df_verif[df_verif["bulan_data"].isna() if month_value is None
-                                    else df_verif["bulan_data"].eq(month_value)].copy()
-
-                # Auto-filter: Jika sudah ada tabel resmi bulanan (YYYYMM_ADD_...), otomatis sembunyikan tabel tanggal draft (YYYYMMDD_ADD_...)
-                if not df_verif.empty and "tabel_sumber" in df_verif.columns and "layer_type" in df_verif.columns:
-                    dated_mask = df_verif["tabel_sumber"].astype(str).str.match(r"^20\d{6}_")
-                    clean_groups = set(
-                        zip(
-                            df_verif[~dated_mask]["schema_name"],
-                            df_verif[~dated_mask]["bulan_data"],
-                            df_verif[~dated_mask]["layer_type"]
-                        )
+                if not months:
+                    st.warning("Tidak ada data verifikasi untuk pilihan ini.")
+                else:
+                    selected_month = st.selectbox(
+                        "Bulan Validasi", months, format_func=month_label, key="maghes_result_month"
                     )
-                    mask_keep = ~dated_mask | ~df_verif.set_index(["schema_name", "bulan_data", "layer_type"]).index.isin(clean_groups)
-                    df_verif = df_verif[mask_keep.values].copy()
-                st.markdown("##### 📋 Pilih Hasil Verifikasi")
-                options = df_verif["id"].tolist()
-                format_map = {
-                    row["id"]: f"{row['schema_name']}.{row['tabel_sumber']} ({row['layer_type']})"
-                    for _, row in df_verif.iterrows()
-                }
-                selected_verif_id = st.selectbox(
-                    "Tabel / layer", options,
-                    format_func=lambda value: format_map.get(value, str(value)),
-                    key="maghes_result_table",
-                )
+                    month_value = None if selected_month == "Tanpa bulan" else selected_month
+                    df_verif = df_verif[df_verif["bulan_data"].isna() if month_value is None
+                                        else df_verif["bulan_data"].eq(month_value)].copy()
+
+                    # Auto-filter: Jika sudah ada tabel resmi bulanan (YYYYMM_ADD_...), otomatis sembunyikan tabel tanggal draft (YYYYMMDD_ADD_...)
+                    if not df_verif.empty and "tabel_sumber" in df_verif.columns and "layer_type" in df_verif.columns:
+                        dated_mask = df_verif["tabel_sumber"].astype(str).str.match(r"^20\d{6}_")
+                        clean_groups = set(
+                            zip(
+                                df_verif[~dated_mask]["schema_name"],
+                                df_verif[~dated_mask]["bulan_data"],
+                                df_verif[~dated_mask]["layer_type"]
+                            )
+                        )
+                        mask_keep = ~dated_mask | ~df_verif.set_index(["schema_name", "bulan_data", "layer_type"]).index.isin(clean_groups)
+                        df_verif = df_verif[mask_keep.values].copy()
+                    
+                    st.markdown("##### 📋 Pilih Hasil Verifikasi")
+                    options = df_verif["id"].tolist()
+                    if not options:
+                        st.info("Belum ada layer yang diverifikasi pada filter ini.")
+                    else:
+                        format_map = {
+                            row["id"]: (
+                                f"{row['tabel_sumber']} ({row['layer_type']})"
+                                if selected_up3 != "Semua UP3"
+                                else f"{row['schema_name']}.{row['tabel_sumber']} ({row['layer_type']})"
+                            )
+                            for _, row in df_verif.iterrows()
+                        }
+                        selected_verif_id = st.selectbox(
+                            "Tabel / layer", options,
+                            format_func=lambda value: format_map.get(value, str(value)),
+                            key="maghes_result_table",
+                        )
 
         # Globe animation (same as main MAGHES)
         st.markdown("""
